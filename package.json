@@ -1,0 +1,17 @@
+{
+  "name": "hytopia-thumpvboden",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@hytopia.com/assets": "^0.1.7",
+    "dotenv": "^16.4.7",
+    "hytopia": "^0.1.82",
+    "openai": "^4.79.1"
+  }
+}
