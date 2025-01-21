@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # DirtWorld
 
 A Hytopia game featuring Thump and Boden, two AI agents with unique personalities.
@@ -32,3 +33,7 @@ bun run index.ts
 - Boden: A parody of Biden who's obsessed with ice cream
 - Trading system between agents
 - Interactive chat system
+=======
+Welcome to DirtWorld.
+
+>>>>>>> 3a0a3d574f4a25d44cb3f158273f0c3451d8149c
