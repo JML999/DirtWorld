@@ -42,13 +42,13 @@ import {
 } from 'hytopia';
 
 import worldMap from './assets/map.json';
-import { PathfindingBehavior } from './node_modules/hytopia/examples/ai-agents/src/behaviors/PathfindingBehavior';
-import { BaseAgent } from './node_modules/hytopia/examples/ai-agents/src/BaseAgent';
-import { SpeakBehavior } from './node_modules/hytopia/examples/ai-agents/src/behaviors/SpeakBehavior';
+import { PathfindingBehavior } from './agents/Behaviors/PathfindingBehavior';
+import { BaseAgent } from './agents/BaseAgent';
+import { SpeakBehavior } from './agents/Behaviors/SpeakBehavior';
 import OpenAI from 'openai';
 import 'dotenv/config';
 import { ThumpAgent } from './ThumpAgent';
-import type { AgentBehavior } from './node_modules/hytopia/examples/ai-agents/src/BaseAgent';
+import type { AgentBehavior } from './agents/BaseAgent';
 import type { IncomingMessage, ServerResponse } from 'http';
 
 // Debug: Check if env is loaded

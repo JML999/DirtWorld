@@ -1,19 +1,34 @@
-<<<<<<< HEAD
-# hytopia-thumpvboden
+# DirtWorld
 
-To install dependencies:
+A Hytopia game featuring Thump and Boden, two AI agents with unique personalities.
 
+## Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/hytopia/hytopia-thumpvboden.git
+```
+
+2. Install dependencies:
 ```bash
 bun install
 ```
 
-To run:
+3. Create a `.env` file in the root directory and add your OpenAI API key:
+```bash
+OPENAI_API_KEY=your_api_key_here
+```
 
+4. Run the game:
 ```bash
 bun run index.ts
 ```
 
-This project was created using `bun init` in bun v1.1.45. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
-=======
-# DirtWorld
->>>>>>> a507e791dc56ef2fa302bf9fd8bf415f578a7ac0
+5. Visit `https://play.hytopia.com/?join=localhost:8080` in your browser
+
+## Features
+
+- Thump: A parody of Trump who's obsessed with his cryptocurrency
+- Boden: A parody of Biden who's obsessed with ice cream
+- Trading system between agents
+- Interactive chat system
