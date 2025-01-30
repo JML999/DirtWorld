@@ -3,112 +3,112 @@
     {
       "id": 1,
       "name": "bricks",
-      "textureUri": "textures/bricks.png"
+      "textureUri": "blocks/bricks.png"
     },
     {
       "id": 2,
       "name": "clay",
-      "textureUri": "textures/clay.png"
+      "textureUri": "blocks/clay.png"
     },
     {
       "id": 3,
-      "name": "diamond_ore",
-      "textureUri": "textures/diamond_ore.png"
+      "name": "diamond-ore",
+      "textureUri": "blocks/diamond-ore.png"
     },
     {
       "id": 4,
       "name": "dirt",
-      "textureUri": "textures/dirt.png"
+      "textureUri": "blocks/dirt.png"
     },
     {
       "id": 5,
-      "name": "dragons_stone",
-      "textureUri": "textures/dragons_stone.png"
+      "name": "dragons-stone",
+      "textureUri": "blocks/dragons-stone.png"
     },
     {
       "id": 6,
       "name": "glass",
-      "textureUri": "textures/glass.png"
+      "textureUri": "blocks/glass.png"
     },
     {
       "id": 7,
       "name": "grass",
-      "textureUri": "textures/grass"
+      "textureUri": "blocks/grass"
     },
     {
       "id": 8,
       "name": "gravel",
-      "textureUri": "textures/gravel.png"
+      "textureUri": "blocks/gravel.png"
     },
     {
       "id": 9,
       "name": "ice",
-      "textureUri": "textures/ice.png"
+      "textureUri": "blocks/ice.png"
     },
     {
       "id": 10,
-      "name": "infected_shadowrock",
-      "textureUri": "textures/infected_shadowrock.png"
+      "name": "infected-shadowrock",
+      "textureUri": "blocks/infected-shadowrock.png"
     },
     {
       "id": 11,
-      "name": "log_side",
-      "textureUri": "textures/log_side.png"
+      "name": "log-side",
+      "textureUri": "blocks/log"
     },
     {
       "id": 12,
-      "name": "log_top",
-      "textureUri": "textures/log_top.png"
+      "name": "log-top",
+      "textureUri": "blocks/log"
     },
     {
       "id": 13,
-      "name": "mossy_coblestone",
-      "textureUri": "textures/mossy_coblestone.png"
+      "name": "mossy-coblestone",
+      "textureUri": "blocks/mossy-coblestone.png"
     },
     {
       "id": 14,
       "name": "nuit",
-      "textureUri": "textures/nuit.png"
+      "textureUri": "blocks/nuit.png"
     },
     {
       "id": 15,
-      "name": "oak_leaves",
-      "textureUri": "textures/oak_leaves.png"
+      "name": "oak-leaves",
+      "textureUri": "blocks/oak-leaves.png"
     },
     {
       "id": 16,
-      "name": "oak_planks",
-      "textureUri": "textures/oak_planks.png"
+      "name": "oak-planks",
+      "textureUri": "blocks/oak-planks.png"
     },
     {
       "id": 17,
       "name": "sand",
-      "textureUri": "textures/sand.png"
+      "textureUri": "blocks/sand.png"
     },
     {
       "id": 18,
       "name": "shadowrock",
-      "textureUri": "textures/shadowrock.png"
+      "textureUri": "blocks/shadowrock.png"
     },
     {
       "id": 19,
       "name": "stone",
-      "textureUri": "textures/stone.png"
+      "textureUri": "blocks/stone.png"
     },
     {
       "id": 20,
-      "name": "stone_bricks",
-      "textureUri": "textures/stone_bricks.png"
+      "name": "stone-bricks",
+      "textureUri": "blocks/stone-bricks.png"
     },
     {
       "id": 21,
-      "name": "void_sand",
-      "textureUri": "textures/void_sand.png"
+      "name": "void-sand",
+      "textureUri": "blocks/void-sand.png"
     },
     {
       "id": 22,
-      "name": "water_still",
-      "textureUri": "textures/water.png",
+      "name": "water-still",
+      "textureUri": "blocks/water.png",
       "isLiquid": true
     }
   ],

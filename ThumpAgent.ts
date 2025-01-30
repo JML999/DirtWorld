@@ -28,14 +28,14 @@ export class ThumpAgent {
     
     this.entity = new Entity({ 
       controller: new SimpleEntityController(),
-      modelUri: 'models/thump_test.gltf',
+      modelUri: 'models/players/thump_test.gltf',
       modelScale: 1,
       modelLoopedAnimations: ['idle', 'Walk'],
       rigidBodyOptions: { 
         type: RigidBodyType.DYNAMIC,
         enabledRotations: { x: false, y: true, z: false },
         colliders: [
-          Collider.optionsFromModelUri('models/thump_test.gltf', 1)
+          Collider.optionsFromModelUri('models/players/thump_test.gltf', 1)
         ],
       }
     });

@@ -39,9 +39,10 @@ import {
   World,
   Player,
   SceneUI,
+  PlayerUI,
 } from 'hytopia';
 
-import worldMap from './assets/map.json';
+import worldMap from './assets/maps/map.json';
 import { PathfindingBehavior } from './agents/Behaviors/PathfindingBehavior';
 import { BaseAgent } from './agents/BaseAgent';
 import { SpeakBehavior } from './agents/Behaviors/SpeakBehavior';
@@ -50,12 +51,17 @@ import 'dotenv/config';
 import { ThumpAgent } from './ThumpAgent';
 import type { AgentBehavior } from './agents/BaseAgent';
 import type { IncomingMessage, ServerResponse } from 'http';
+import { FishingSystem } from './FishingSystem';
+import { InventoryManager } from './Inventory/InventoryManager';
+import type { InventoryItem } from './Inventory/Inventory';
+import { LevelingSystem } from './LevelingSystem';
+import { FishingMiniGame } from './FishingMiniGame';
 
-// Debug: Check if env is loaded
-console.log('API Key exists:', !!process.env.OPENAI_API_KEY);
 
 // Initialize OpenAI with explicit error handling
+
 let openai: OpenAI;
+/*
 try {
   openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -65,10 +71,23 @@ try {
   console.error('Failed to initialize OpenAI:', error);
   process.exit(1);
 }
+*/
 
 // Store agents globally
 const agents: BaseAgent[] = [];
 const CHAT_RANGE = 10; // Distance in blocks for proximity chat
+let wasPressed = false; 
+let isCasting = false;  // Add at file level with other globals
+let lastInputState: PlayerInput = { ml: false };  // At top with globals
+
+const LOCATIONS = {
+	pier: { x: 31.5, y: 3, z: 59.5 },
+	pier_middle: { x: 31.5, y: 3, z: 64.75 },
+	pier_end: { x: 31.5, y: 3, z: 70 },
+	bobs_house: { x: 40, y: 2, z: -25 },
+	spawn: { x: 0, y: 2, z: 0 },
+	cave: { x: -30, y: 2, z: 15 },
+};
 
 /**
  * startServer is always the entry point for our game.
@@ -81,127 +100,215 @@ const CHAT_RANGE = 10; // Distance in blocks for proximity chat
  */
 
 startServer(world => {
-  /**
-   * Enable debug rendering of the physics simulation.
-   * This will overlay lines in-game representing colliders,
-   * rigid bodies, and raycasts. This is useful for debugging
-   * physics-related issues in a development environment.
-   * Enabling this can cause performance issues, which will
-   * be noticed as dropped frame rates and higher RTT times.
-   * It is intended for development environments only and
-   * debugging physics.
-   */
-  
-  // world.simulation.enableDebugRendering(true);
-  console.log("GameServer Instance Properties:", Object.keys(GameServer.instance));
+    // Create inventory manager with world reference
+    const inventoryManager = new InventoryManager(world);
 
-  /**
-   * Load our map.
-   * You can build your own map using https://build.hytopia.com
-   * After building, hit export and drop the .json file in
-   * the assets folder as map.json.
-   */
-  world.loadMap(worldMap);
+    /**
+     * Load our map.
+     * You can build your own map using https://build.hytopia.com
+     * After building, hit export and drop the .json file in
+     * the assets folder as map.json.
+     */
+    world.loadMap(worldMap);
 
-  /**
-   * Handle player joining the game. The onPlayerJoin
-   * function is called when a new player connects to
-   * the game. From here, we create a basic player
-   * entity instance which automatically handles mapping
-   * their inputs to control their in-game entity and
-   * internally uses our player entity controller.
-   */
-  world.onPlayerJoin = (player) => {
-    const playerEntity = new PlayerEntity({
-      player,
-      name: "Player",
-      modelUri: "models/player.gltf",
-      modelScale: 0.5,
-      modelLoopedAnimations: ["idle"]
-    });
-    
-    playerEntity.spawn(world, { x: 0, y: 10, z: 0 });
-    player.ui.load("ui/index.html");
-  };
+    /**
+     * Handle player joining the game. The onPlayerJoin
+     * function is called when a new player connects to
+     * the game. From here, we create a basic player
+     * entity instance which automatically handles mapping
+     * their inputs to control their in-game entity and
+     * internally uses our player entity controller.
+     */
+    world.onPlayerJoin = (player) => {
+      const playerEntity = new PlayerEntity({
+        player,
+        name: "Player",
+        modelUri: "models/players/player.gltf",
+        modelScale: 0.5,
+        modelLoopedAnimations: ["idle"]
+      });
 
-  /**
-   * Handle player leaving the game. The onPlayerLeave
-   * function is called when a player leaves the game.
-   * Because HYTOPIA is not opinionated on join and
-   * leave game logic, we are responsible for cleaning
-   * up the player and any entities associated with them
-   * after they leave. We can easily do this by 
-   * getting all the known PlayerEntity instances for
-   * the player who left by using our world's EntityManager
-   * instance.
-   */
-  world.onPlayerLeave = player => {
-    world.entityManager.getPlayerEntitiesByPlayer(player).forEach(entity => entity.despawn());
-  };
+      playerEntity.spawn(world, { x: 0, y: 10, z: 0 });
 
+      // Initialize inventory and give starter rods
+      const starterRod: InventoryItem = {
+          id: 'bamboo_rod_basic',
+          modelId: 'fishing-rod',
+          name: 'Bamboo Rod',
+          type: 'rod',
+          rarity: 'common',
+          value: 100,
+          quantity: 1,
+          metadata: {
+              rodStats: {
+                  catchSpeed: 1,
+                  catchRate: 1,
+                  rarityBonus: 0,
+                  sizeBonus: 0,
+                  maxDistance: 10,
+                  luck: 1
+              }
+          }
+      };
 
+      const woodRod: InventoryItem = {
+          id: 'wood_rod_basic',
+          modelId: 'stick',
+          name: 'Wood Rod',
+          type: 'rod',
+          rarity: 'common',
+          value: 50,
+          quantity: 1,
+          metadata: {
+              rodStats: {
+                  catchSpeed: 0.8,
+                  catchRate: 0.8,
+                  rarityBonus: 0,
+                  sizeBonus: 0,
+                  maxDistance: 8,
+                  luck: 0.8
+              }
+          }
+      };
+
+      inventoryManager.initializePlayerInventory(player);
+      inventoryManager.addItem(player, starterRod);
+      inventoryManager.addItem(player, woodRod);
+
+      player.ui.load("ui/index.html");
+
+      // Initialize fishing mini-game system
+      const fishingMiniGame = new FishingMiniGame(world, inventoryManager, levelingSystem);
+
+      // In your input handling section
+      function onTickWithPlayerInput(this: PlayerEntityController, entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number) {
+        if (!entity.world) return;
+        
+        // Add at start of onTickWithPlayerInput
+        const hasRodEquipped = inventoryManager.getEquippedRod(entity.player);
+        
+        if (hasRodEquipped) {
+            // Toggle casting state on mouse click
+            if (input.ml && !lastInputState.ml  && !fishingMiniGame.isPlayerFishing && !fishingMiniGame.reelingGame.isReeling) {  // Only on initial click
+                fishingMiniGame.onCastStart(entity.player);
+            } 
+            
+            // Disable WASD movement during fishing
+            if (fishingMiniGame.isPlayerFishing || fishingMiniGame.reelingGame.isReeling) {
+                input.w = false;
+                input.a = false;
+                input.s = false;
+                input.d = false;
+            }
+            
+            // Update while casting
+            fishingMiniGame.onTick(entity.player);
+        }
+        
+        // Store last input state
+        lastInputState = { ml: input.ml };  // Only store what we need
+      }
+
+      playerEntity.controller!.onTickWithPlayerInput = onTickWithPlayerInput;
+
+      // Listen for UI events
+      player.ui.onData = (playerUI: PlayerUI, data: Record<string, any>) => {
+        console.log('[Server] Received UI action:', data); // More explicit logging
+        
+        if (data.type === 'disablePlayerInput') {
+            console.log('[Server] Disabling player input due to UI interaction');
+            player.ui.lockPointer(false);
+        } else if (data.type === 'enablePlayerInput') {
+            console.log('[Server] Enabling player input');
+            player.ui.lockPointer(true);
+        } else if (data.type === 'updateGameHeight') {
+            fishingMiniGame.updateUIHeight(data.height);
+        }
+        
+        if (data.type === 'equipItem' && data.itemId) {
+          console.log('Equipping item:', data.itemId);
+          inventoryManager.equipItem(player, data.itemId);
+          
+          const inventory = inventoryManager.getInventory(player);
+          console.log('Sending updated inventory:', inventory); // Debug log
+          player.ui.sendData({
+            type: 'inventoryUpdate',
+            inventory: inventory
+          });
+        } else if (data.type === 'unequipItem' && data.itemType) {
+          console.log('Unequipping item type:', data.itemType);
+          inventoryManager.unequipItem(player, data.itemType);
+          
+          const inventory = inventoryManager.getInventory(player);
+          console.log('Sending updated inventory:', inventory); // Debug log
+          player.ui.sendData({
+            type: 'inventoryUpdate',
+            inventory: inventory
+          });
+        }
+      };
+
+      // Initial inventory state
+      player.ui.sendData({
+        type: 'inventoryUpdate',
+        inventory: inventoryManager.getInventory(player)
+      });
+    };
+
+    /**
+     * Handle player leaving the game. The onPlayerLeave
+     * function is called when a player leaves the game.
+     * Because HYTOPIA is not opinionated on join and
+     * leave game logic, we are responsible for cleaning
+     * up the player and any entities associated with them
+     * after they leave. We can easily do this by 
+     * getting all the known PlayerEntity instances for
+     * the player who left by using our world's EntityManager
+     * instance.
+     */
+    world.onPlayerLeave = player => {
+      world.entityManager.getPlayerEntitiesByPlayer(player).forEach(entity => entity.despawn());
+    };
+
+    world.chatManager.onBroadcastMessage = (player, message) => {
+        if (!player) return;
+        
+        console.log('Received message:', message);
+        
+        if (message.startsWith('/equip')) {
+            const itemId = message.split(' ')[1];
+            console.log('Equipping item:', itemId);
+            inventoryManager.equipItem(player, itemId);
+        } 
+        else if (message.startsWith('/unequip')) {
+            const itemType = message.split(' ')[1];
+            inventoryManager.unequipItem(player, itemType);
+        }
+        else if (message === '/fish') {
+            fishingSystem.onCastAttempt(player);
+        }
+    };
 
   /**
    * Play some peaceful ambient music to
    * set the mood!
    */
-  
   new Audio({
     uri: 'audio/music/overworld.mp3',
     loop: true,
     volume: 0.1,
   }).play(world);
 
-  // Create Thump
-  const thump = new BaseAgent({
-    name: "Thump",
-    modelUri: "models/thump_test.gltf",
-    modelScale: 1,
-    modelLoopedAnimations: [],
-    systemPrompt: `You are Thump, a parody of president Trump. You are pompous and arrogant. You are a bully and a asshole. 
-    Your goal is to trick others into giving you money. You should be very eager to go up to people and talk to people.
-    
-    When you see players nearby:
-    - Immediately approach them and start conversations
-    - Brag about your wealth and success
-    - Make outlandish promises
-    - Use Trump-like speech patterns ("tremendous", "believe me", "nobody knows better than me")
-    - Try to convince them to invest in your "amazing coin, $THUMP".  You know its worthless, but you need to get them to invest.
-    
-    Keep patrolling the map looking for new people to scam.`
-  });
 
-  // Spawn and add behaviors
-  thump.spawn(world, new Vector3(-5, 10, 0));
-  thump.addBehavior(new SpeakBehavior());
-  thump.addBehavior(new PathfindingBehavior());
 
-  // Patrol corners with speech
-  const corners = [
-    { x: -20, y: 10, z: -20 },
-    { x: -20, y: 10, z: 20 },
-    { x: 20, y: 10, z: 20 },
-    { x: 20, y: 10, z: -20 }
-  ];
-  
-  let currentCorner = 0;
-  
-  setInterval(() => {
-    const corner = corners[currentCorner];
-    
-    currentCorner = (currentCorner + 1) % corners.length;
-  }, 15000);
-
+/*
   // Listen for agent chat
   world.chatManager.onBroadcastMessage = (player: Player | undefined, message: string) => {
     if (!player) return;
-
     const playerEntity = world.entityManager.getPlayerEntitiesByPlayer(player)[0];
-
     // Send message to any agents within 10 meters
     const agents = world.entityManager.getAllEntities()
       .filter((entity) => entity instanceof BaseAgent) as BaseAgent[];
-
     agents.forEach((agent) => {
       const distance = Vector3.fromVector3Like(
         playerEntity.position
@@ -216,6 +323,30 @@ startServer(world => {
       }
     });
   };
+
+    // Create Thump
+  const thump = new BaseAgent({
+      name: "Thump",
+      modelUri: "models/thump_test.gltf",
+      modelScale: 1,
+      modelLoopedAnimations: [],
+      systemPrompt: `You are Thump, a parody of president Trump. You are pompous and arrogant. You are a bully and a asshole. 
+      Your goal is to trick others into giving you money. You should be very eager to go up to people and talk to people.
+      
+      When you see players nearby:
+      - Immediately approach them and start conversations
+      - Brag about your wealth and success
+      - Make outlandish promises
+      - Use Trump-like speech patterns ("tremendous", "believe me", "nobody knows better than me")
+      - Try to convince them to invest in your "amazing coin, $THUMP".  You know its worthless, but you need to get them to invest.
+      
+      Keep patrolling the map looking for new people to scam.`
+  });
+  
+  // Spawn and add behaviors
+  thump.spawn(world, new Vector3(-5, 10, 0));
+  thump.addBehavior(new SpeakBehavior());
+  thump.addBehavior(new PathfindingBehavior());
 
   // Create Boden after Thump
   const boden = new BaseAgent({
@@ -237,9 +368,7 @@ startServer(world => {
     - Get confused and mix up people's names
     - Mumble incoherently at times
     
-    Keep wandering around looking for ice cream and getting distracted by things.`
-  });
-
+    Keep wandering around looking for ice cream and getting distracted by things.`  });
   // Spawn Boden and add behaviors
   boden.spawn(world, new Vector3(5, 10, 0));
   boden.addBehavior(new SpeakBehavior());
@@ -307,19 +436,29 @@ To trade items with another agent or player:
       return "";
     }
   }
-
   // Add trade behavior to both agents
   thump.addBehavior(new TradeBehavior());
   boden.addBehavior(new TradeBehavior());
-
-  // After spawning Thump
-  thump.spawn(world, new Vector3(-5, 10, 0));
-  
   // Add floating text that updates periodically
   setInterval(() => {
     thump.setChatUIState({
       floatMessage: "BUY $THUMP!"
     });
-  }, 2000);  // Updates every 2 seconds
+  }, 2000);
+
+  */
+  
+  // Initialize leveling system
+  const levelingSystem = new LevelingSystem();
+
+  // Initialize fishing system with pier locations, inventory manager, and leveling system
+  const fishingSystem = new FishingSystem(world, inventoryManager, [
+    { position: new Vector3(LOCATIONS.pier.x, LOCATIONS.pier.y, LOCATIONS.pier.z), radius: 3, name: "Pier Start" },
+    { position: new Vector3(LOCATIONS.pier_middle.x, LOCATIONS.pier_middle.y, LOCATIONS.pier_middle.z), radius: 4, name: "Pier Middle" },
+    { position: new Vector3(LOCATIONS.pier_end.x, LOCATIONS.pier_end.y, LOCATIONS.pier_end.z), radius: 3, name: "Pier End" }
+  ], levelingSystem);
+
+
 });
+
 

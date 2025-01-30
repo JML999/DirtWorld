@@ -10,7 +10,6 @@ import {
 	RigidBodyType,
 	SceneUI,
 	PlayerEntity,
-	QuaternionLike,
 } from "hytopia";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/src/resources/index.js";
@@ -85,7 +84,7 @@ export class BaseAgent extends Entity {
 	}) {
 		super({
 			name: options.name || "BaseAgent",
-			modelUri: options.modelUri || "models/player.gltf",
+			modelUri: options.modelUri || "models/players/player.gltf",
 			modelLoopedAnimations: options.modelLoopedAnimations || ["idle"],
 			modelScale: options.modelScale || 0.5,
 			controller: new SimpleEntityController(),

@@ -9,9 +9,9 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@hytopia.com/assets": "^0.1.7",
+    "@hytopia.com/assets": "^0.2.5",
     "dotenv": "^16.4.7",
-    "hytopia": "^0.1.82",
+    "hytopia": "0.1.94",
     "openai": "^4.79.1"
   }
 }
