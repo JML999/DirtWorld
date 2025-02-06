@@ -42,16 +42,159 @@ export class LevelingSystem {
         },
         {
             level: 4,
-            xpRequired: 500,
+            xpRequired: 350,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: ['squid'],
                 rodTypes: ['fiber_rod']
             }
         },
-        // Add more levels as needed
-    ];
-
+        {
+            level: 5,
+            xpRequired: 500,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 6,
+            xpRequired: 650,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 7,
+            xpRequired: 800,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 8,
+            xpRequired: 950,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },    
+        {
+            level: 9,
+            xpRequired: 1100,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']  
+            }
+        },  
+        {
+            level: 10,
+            xpRequired: 1500    ,
+            rewards: {           
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+                },  
+        {
+            level: 11,
+            xpRequired: 2000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+            },  
+        {
+            level: 12,
+            xpRequired: 2500,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 13,
+            xpRequired: 3000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },  
+        {   
+            level: 14,
+            xpRequired: 3500,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 15,
+            xpRequired: 4000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 16,
+            xpRequired: 5000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],      
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 17,
+            xpRequired: 6000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },        
+        {
+            level: 18,
+            xpRequired: 7500,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],      
+                rodTypes: ['']
+            }
+        },  
+        {
+            level: 19,
+            xpRequired: 8000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],     
+                rodTypes: ['']
+            }
+        },        
+        {
+            level: 20,
+            xpRequired: 1000,
+            rewards: { 
+                tileSlots: 4,
+                newFishTypes: [''],      
+                rodTypes: ['']
+            }
+        },  
+    ]
+    
     private playerLevels: Map<string, { level: number, xp: number }> = new Map();
 
     constructor() {}

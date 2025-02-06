@@ -24,6 +24,8 @@ export interface InventoryItem {
         rodStats?: FishingStats & {
             style?: string;
             specialAbility?: string;
+            maxCatchWeight: number;
+            custom?: boolean;
         };
         fishStats?: {
             size: number;
@@ -31,6 +33,7 @@ export interface InventoryItem {
             species: string;
             location?: string;
             timestamp?: number;
+            baited?: boolean;
         };
         baitStats?: {
             attractionRate: number;
@@ -46,4 +49,5 @@ export interface PlayerInventory {
     maxSlots: number;
     equippedRod?: string;  // ID of equipped rod
     equippedBait?: string; // ID of equipped bait
+    equippedFish?: string; // ID of equipped fish
 }

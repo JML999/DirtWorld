@@ -1,72 +1,110 @@
-import { Player } from "hytopia";
+import { Player, type PlayerInput } from "hytopia";
 import { World } from "hytopia";
 import { Vector3 } from "hytopia";
 import { InventoryManager } from "./Inventory/InventoryManager";
-import mapData from './assets/maps/map.json';
+import mapData from './assets/maps/map_test.json';
 import { Entity } from "hytopia";
 import type { LevelingSystem } from './LevelingSystem';
 import { PIER_FISH_CATALOG } from './fishCatalog';
 import type { FishData } from './fishCatalog';
 import type { ItemRarity } from './Inventory/Inventory';
 import { FishSelector, type CaughtFish } from './FishSelector';
+import type { PlayerStateManager } from "./PlayerStateManager";
+import { MessageManager } from "./MessageManager";
+
+export interface FishingState {
+    isCasting: boolean;
+    isReeling: boolean;
+    isJigging: boolean;
+    lastInputState: PlayerInput;
+    castPower: number;
+    isPlayerFishing: boolean;
+    currentCatch: CaughtFish | null;
+    reelingGame: ReelingState;
+    fishVelocityY: number;
+    fishDepth: number;
+    fishingInterval: NodeJS.Timeout | null;
+}
+
+interface ReelingState {
+    isReeling: boolean;
+    fishPosition: number;
+    barPosition: number;
+    fishVelocity: number;
+    progress: number;
+    currentCatch: CaughtFish | null;
+}
 
 export class FishingMiniGame {
     public reelingGame: ReelingGame;
     public isPlayerFishing = false;
-    private isCasting: boolean = false;
-    private castPower: number = 0;
-    private fishingInterval: NodeJS.Timeout | null = null;
     private fishSelector: FishSelector;
     private currentCatch: CaughtFish | null = null;
 
     private readonly MAX_POWER = 100;
     private readonly POWER_LOOP_SPEED = 2; // How fast the power increases
-    private player: Player | null = null;
     private readonly PLAYER_EYE_HEIGHT = 1.6; // Assuming a default eye height
 
     private readonly GAME_DURATION = 5000; // 5 seconds instead of 3
     private readonly DEPTH_LEVELS = 3;     // Just 3 depths: shallow, middle, deep
-    private fishDepth: number = 0;         // Start at top
-    private isJigging: boolean = false;    // Track if game is active
     private readonly GRAVITY = 0.01;          // Reduced for gentler falling
     private readonly BOUNCE_FACTOR = 0.8;    // Keep bounce at 80%
-    private readonly JIG_FORCE = -0.1;       // Smaller upward force for gentler nudges
-    private fishVelocityY = 0;         
+    private readonly JIG_FORCE = -0.1;       // Smaller upward force for gentler nudges  
     private uiHeight: number = 300;
     
     constructor(
         private world: World,
         private inventoryManager: InventoryManager,
-        private levelingSystem: LevelingSystem
+        private levelingSystem: LevelingSystem,
+        private stateManager: PlayerStateManager,
+        private messageManager: MessageManager,
     ) {
-        this.reelingGame = new ReelingGame(this.levelingSystem, world, inventoryManager);
+        this.reelingGame = new ReelingGame(this.levelingSystem, world, inventoryManager, stateManager, this.messageManager);
         this.fishSelector = new FishSelector(world, inventoryManager, levelingSystem);
     }
 
+
     onCastStart(player: Player) {
-        if (!this.isCasting) {  // Start the power loop
-            this.player = player;
-            this.isCasting = true;
-            this.castPower = 0;
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+    
+        console.log("onCastStart");
+        if (!state.fishing.isCasting) {  // Start the power loop
+            state.fishing.isCasting = true;
+            state.fishing.castPower = 0;
+            
+            playerEntity.startModelOneshotAnimations([ 'cast_back_lower' ]);
+            playerEntity.startModelOneshotAnimations([ 'cast_back_upper' ]);
+            
             player.ui.sendData({
                 type: 'castingPowerUpdate',
-                power: this.castPower
+                power: state.fishing.castPower
             });
         } else {  // Stop at current power and cast
-            this.isCasting = false;
-            const finalPower = this.castPower;
+            state.fishing.isCasting = false;
             this.onCastEnd(player);
         }
     }
 
     onCastEnd(player: Player) {
-         this.isPlayerFishing = true;
-        const rod = this.inventoryManager.getEquippedRod(player);
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+
+        state.fishing.isPlayerFishing = true;
+        const rod = this.stateManager.getEquippedRod(player);
         if (!rod) return;
 
         // Get PlayerEntity for this player
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
         if (!playerEntity) return;
+
+        playerEntity.stopModelAnimations(['cast_back_lower']);
+        playerEntity.stopModelAnimations(['cast_back_upper']);
+        playerEntity.startModelOneshotAnimations([ 'cast_foward_lower' ]);
+        playerEntity.startModelOneshotAnimations([ 'cast_foward_upper' ]);
+
+        console.log("Players Location:", playerEntity.position);
 
         // Get forward direction and negate it to reverse direction
         const rotation = playerEntity.rotation;
@@ -79,8 +117,10 @@ export class FishingMiniGame {
             z: playerEntity.position.z
         };
 
+        console.log("Start pos:", playerEntity.position);
+
         const maxDistance = rod.metadata?.rodStats?.maxDistance ?? 10;
-        const distance = (this.castPower / 100) * maxDistance;
+        const distance = (state.fishing.castPower / 100) * maxDistance;
 
         // Check if landing position is in water
         const result = this.findFishingSpot(startPos, { x: forwardX, z: forwardZ }, distance);
@@ -101,61 +141,63 @@ export class FishingMiniGame {
                 this.startFishing(player, result.position!);
             }, 2000);
         } else {
-            this.isPlayerFishing = false;
+            playerEntity.stopModelAnimations(['cast_foward_lower']);
+            playerEntity.stopModelAnimations(['cast_foward_upper']);
+            state.fishing.isPlayerFishing = false;
         }
         // Clear UI
         player.ui.sendData({
             type: 'castingPowerUpdate',
             power: null
         });
-        this.player = null;
     }
 
     private findFishingSpot(startPos: { x: number, y: number, z: number }, 
-                           forwardDir: { x: number, z: number }, 
-                           distance: number): { found: boolean, position?: { x: number, y: number, z: number } } {
-        // Calculate end point of cast
+        forwardDir: { x: number, z: number }, 
+        distance: number): { found: boolean, position?: { x: number, y: number, z: number } } {
         const landingPos = {
-            x: startPos.x + forwardDir.x * distance,
-            y: startPos.y,
-            z: startPos.z + forwardDir.z * distance
+        x: startPos.x + forwardDir.x * distance,
+        y: startPos.y,
+        z: startPos.z + forwardDir.z * distance
         };
-        
-        console.log("Landing spot (eye level):", landingPos);
-        
-        // Cast downward from that point
+
+        console.log("Checking cast at landing spot:", landingPos);
+
         for (let y = landingPos.y; y > 0; y--) {
-            const checkPos = {
-                x: Math.floor(landingPos.x),
-                y: Math.floor(y),
-                z: Math.floor(landingPos.z)
-            };
-            console.log("Checking for water at:", checkPos);
-            
-            if (this.isWaterBlock(checkPos)) {
-                console.log("Found water at:", checkPos);
-                return { found: true, position: checkPos };
-            }
+        const checkPos = {
+        x: Math.floor(landingPos.x),
+        y: Math.floor(y),
+        z: Math.floor(landingPos.z)
+        };
+
+        const blockKey = `${checkPos.x},${checkPos.y},${checkPos.z}`;
+        const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
+
+        // Skip if air block (undefined)
+        if (!blockTypeId) continue;
+
+        // Found water
+        if (blockTypeId === 43 || blockTypeId === 42 || blockTypeId === 100) {
+        console.log("Found fishable water at:", checkPos);
+        return { found: true, position: checkPos };
         }
+
+        // Hit any other solid block - invalid fishing spot
+        console.log("Hit non-water block:", blockTypeId, "at position:", checkPos);
+        return { found: false };
+        }
+
         return { found: false };
     }
 
-    private isWaterBlock(position: { x: number, y: number, z: number }): boolean {
-        console.log("testing for water block");
-        console.log(position);
-        const blockKey = `${Math.floor(position.x)},${Math.floor(position.y)},${Math.floor(position.z)}`;
-        console.log(blockKey);
-        const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
-        console.log(blockTypeId);
-        return blockTypeId === 22;  // Water blocks have ID 22
-    }
 
     private startFishing(player: Player, landingPos: { x: number, y: number, z: number }) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
         console.log("Starting fishing mini-game");
-        this.isJigging = true;
-        this.fishDepth = 1;  // Start in middle
-        this.fishVelocityY = 0;  // Start with no velocity
-        this.player = player;
+        state.fishing.isJigging = true;
+        state.fishing.fishDepth = 1;  // Start in middle
+        state.fishing.fishVelocityY = 0;  // Start with no velocity
         
         // Show the game UI with new instructions
         player.ui.sendData({
@@ -166,62 +208,64 @@ export class FishingMiniGame {
 
         setTimeout(() => {
             console.log("Fishing game complete");
-            this.isJigging = false;
-            this.tryToFish(player);
+            state.fishing.isJigging = false;
+            this.tryToFish(player, landingPos);
         }, this.GAME_DURATION);
     }
 
     // Handle Q/E key presses
     public onTick(player: Player | null) {
+        if (!player) return;
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+
         // Handle casting power
-        if (this.isCasting && this.player) {
-            this.castPower = (this.castPower + this.POWER_LOOP_SPEED) % this.MAX_POWER;
-            this.player.ui.sendData({
+        if (state.fishing.isCasting) {
+            state.fishing.castPower = (state.fishing.castPower + this.POWER_LOOP_SPEED) % this.MAX_POWER;
+            player.ui.sendData({
                 type: 'castingPowerUpdate',
-                power: this.castPower
+                power: state.fishing.castPower
             });
         }
 
-        // Handle fish physics
-        if (this.isJigging && player?.input) {
-            // Apply gravity
-            this.fishVelocityY += this.GRAVITY;
-            this.fishDepth += this.fishVelocityY;
-
-            // Handle spacebar jig - gentler upward force
-            if (player.input['q']) {
-                console.log("SPACE pressed!");
-                this.fishVelocityY = this.JIG_FORCE;
-                player.input['q'] = false;
-            }
-
-            // Bounce off walls with full range
-            if (this.fishDepth <= 0) {
-                this.fishDepth = 0;
-                this.fishVelocityY = Math.abs(this.fishVelocityY) * this.BOUNCE_FACTOR;
-            } else if (this.fishDepth >= 2) {
-                this.fishDepth = 2;
-                this.fishVelocityY = -Math.abs(this.fishVelocityY) * this.BOUNCE_FACTOR;
-            }
-
-            // Update JIG UI with new fish position
-            if (this.player) {
-                this.player.ui.sendData({
-                    type: 'startFishing',
-                    fishDepth: this.fishDepth * 1.25  // Extend range to reach bottom
-                });
-            }
+        // Handle fish physics if player is fishing
+        if (state.fishing.isJigging && player?.input) {
+            this.updateFishPhysics(player);
         }
-
         // Add reeling game tick
         if (this.reelingGame) {
             this.reelingGame.onTick(player);
         }
     }
 
-
-    getCastingPower(): number {
-        return this.castPower;
+    private updateFishPhysics(player: Player) {
+        const state = this.stateManager.getState(player);
+        if (!state || !player.input) return;
+    
+        // Apply gravity
+        state.fishing.fishVelocityY += this.GRAVITY;
+        state.fishing.fishDepth += state.fishing.fishVelocityY;
+    
+        // Handle Q key jig
+        if (player.input['q']) {
+            state.fishing.fishVelocityY = this.JIG_FORCE;
+            player.input['q'] = false;
+        }
+    
+        // Bounce off boundaries
+        if (state.fishing.fishDepth <= 0) {
+            state.fishing.fishDepth = 0;
+            state.fishing.fishVelocityY = Math.abs(state.fishing.fishVelocityY) * this.BOUNCE_FACTOR;
+        } else if (state.fishing.fishDepth >= 2) {
+            state.fishing.fishDepth = 2;
+            state.fishing.fishVelocityY = -Math.abs(state.fishing.fishVelocityY) * this.BOUNCE_FACTOR;
+        }
+    
+        // Update UI
+        player.ui.sendData({
+            type: 'startFishing',
+            fishDepth: state.fishing.fishDepth * 1.25
+        });
     }
 
     public updateUIHeight(height: number) {
@@ -234,37 +278,48 @@ export class FishingMiniGame {
         return this.reelingGame.isReeling;
     }
 
-    private tryToFish(player: Player) {
-        this.currentCatch = this.fishSelector.getFish(player, this.fishDepth);
+    //Landing position is the block the cast algo found 
+    private tryToFish(player: Player, landingPos: { x: number, y: number, z: number }) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+        playerEntity.stopModelAnimations(['cast_foward_lower']);
+        playerEntity.stopModelAnimations(['cast_foward_upper']);
+
+        state.fishing.currentCatch = this.fishSelector.getFish(player, state.fishing.fishDepth, landingPos);
         const success = this.currentCatch !== null;
+        var rodMaxWeight = this.stateManager.getEquippedRod(player)?.metadata?.rodStats?.maxCatchWeight;
+        
 
         // Clear jigging state
-        this.isJigging = false;
-        if (this.fishingInterval) {
-            clearInterval(this.fishingInterval);
+        state.fishing.isJigging = false;
+        // Clear any existing interval
+        if (state.fishing.fishingInterval) {
+            clearInterval(state.fishing.fishingInterval);
+            state.fishing.fishingInterval = null;
         }
 
         // Always send fishingComplete to dismiss the jig UI
-        this.player?.ui.sendData({
+        player?.ui.sendData({
             type: 'fishingComplete'
         });
-
-        if (this.currentCatch) {
-            console.log("Fish caught: ", this.currentCatch);
-            console.log("Success: ", success);
+        
+        if (!rodMaxWeight) rodMaxWeight = 10;
+        if (state.fishing.currentCatch && state.fishing.currentCatch.weight <= rodMaxWeight) {
+            console.log("Fish caught: ", state.fishing.currentCatch);
             // Start reeling game
-            this.reelingGame.startReeling(player, this.currentCatch);
-            this.isPlayerFishing = false;
+            this.reelingGame.startReeling(player, state.fishing.currentCatch);
+            state.fishing.isPlayerFishing = false;
         } else {
             // Show "no fish" message
-            this.isPlayerFishing = false;
-            player.ui.sendData({
-                type: "fishingStatus",
-                message: "No fish took the bait!"
-            });
-            console.log("No fish took the bait!");
+            console.log("no jig", state.fishing.isPlayerFishing);
+            state.fishing.isPlayerFishing = false;
+            console.log("no jig", state.fishing.isPlayerFishing);
+            this.messageManager.sendGameMessage("Fish aren't bitin'!", player);
         }
     }
+
 
 
 }
@@ -276,12 +331,12 @@ class ReelingGame {
     private barPosition = 0.5;
     private fishVelocity = 0.005;  // Original fish movement speed
     private readonly BAR_SPEED = 0.015;  // Original bar speed
-    private readonly BAR_WIDTH = 0.2;
+    private readonly BAR_WIDTH = 0.25;
     private progress = 25;
     private levelingSystem: LevelingSystem;
     private world: World;
     private inventoryManager: InventoryManager;
-    
+    private stateManager: PlayerStateManager;
     // Progress tracking
     private readonly PROGRESS_GAIN = 0.5;
     private readonly PROGRESS_LOSS = 0.3;
@@ -290,28 +345,37 @@ class ReelingGame {
     private currentCatch: CaughtFish | null = null;
     private readonly BASE_FISH_SPEED = 0.005;
     private readonly VALUE_SPEED_MULTIPLIER = 0.00002; // Adjust this value to tune difficulty
-
-    constructor(levelingSystem: LevelingSystem, world: World, inventoryManager: InventoryManager) {
+    private messageManager: MessageManager;
+    constructor(levelingSystem: LevelingSystem, world: World, inventoryManager: InventoryManager, stateManager: PlayerStateManager, messageManager: MessageManager) {
         this.levelingSystem = levelingSystem;
         this.world = world;
         this.inventoryManager = inventoryManager;
+        this.stateManager = stateManager;
+        this.messageManager = messageManager;
     }
 
     startReeling(player: Player, fish: CaughtFish) {
-        this.isReeling = true;
-        this.player = player;
-        this.currentCatch = fish;
-        
-        // Reset game state
-        this.fishPosition = 0.5;
-        this.barPosition = 0.5;
-        this.progress = 25;
-        
-        // Adjust fish velocity based on value
-        this.fishVelocity = this.BASE_FISH_SPEED + 
-            (this.currentCatch.value * this.VALUE_SPEED_MULTIPLIER);
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+        console.log("Reeling Start State:", state);
+
+        // Calculate velocity based on fish value
+        const fishVelocity = this.calculateFishVelocity(
+            fish, 
+            this.levelingSystem.getCurrentLevel(player)
+        );
+
+        state.fishing.reelingGame = {
+            isReeling: true,
+            fishPosition: 0.5,  // Start in middle
+            barPosition: 0.5,   // Start in middle
+            fishVelocity: fishVelocity,
+            progress: 25,   
+            currentCatch: fish     // Starting progress
+        };
 
         console.log(`Starting reeling game with fish speed: ${this.fishVelocity}`);
+        console.log("Reeling Start State:", state);
         
         player.ui.sendData({
             type: 'startReeling'
@@ -319,117 +383,144 @@ class ReelingGame {
     }
 
     onTick(player: Player | null) {
-        if (!this.isReeling || !player?.input) return;
+        if (!player) return;
 
-        // Update fish and bar positions (existing code)
-        this.fishPosition += this.fishVelocity;
-        if (this.fishPosition <= 0.1 || this.fishPosition >= 0.9) {
-            this.fishVelocity *= -1;
+        const state = this.stateManager.getState(player);
+        if (!state || !state.fishing.reelingGame.isReeling || !player.input) { return; }
+
+        const game = state.fishing.reelingGame;
+        // Update fish position
+        game.fishPosition += game.fishVelocity;
+        if (game.fishPosition <= 0.1 || game.fishPosition >= 0.9) {
+            game.fishVelocity *= -1;
         }
 
-        // Handle space bar input and prevent jump
+
+        // Update bar position
         if (player.input['q']) {
-            this.barPosition = Math.min(1 - this.BAR_WIDTH, this.barPosition + this.BAR_SPEED);
-          //  player.input['sp'] = false;  
+            game.barPosition = Math.min(0.8, game.barPosition + this.BAR_SPEED);
         } else {
-            this.barPosition = Math.max(0, this.barPosition - this.BAR_SPEED);
+            game.barPosition = Math.max(0, game.barPosition - this.BAR_SPEED);
         }
 
-        // Check if fish is in the target zone
-        const fishInZone = this.fishPosition >= this.barPosition && 
-                          this.fishPosition <= (this.barPosition + this.BAR_WIDTH);
+        // Check if fish is in target zone
+        const fishInZone = game.fishPosition >= game.barPosition && 
+                          game.fishPosition <= (game.barPosition + this.BAR_WIDTH);
 
-        // Update progress based on fish position
+        // Update progress
         if (fishInZone) {
-            this.progress = Math.min(this.MAX_PROGRESS, this.progress + this.PROGRESS_GAIN);
+            game.progress = Math.min(this.MAX_PROGRESS, game.progress + this.PROGRESS_GAIN);
         } else {
-            this.progress = Math.max(this.MIN_PROGRESS, this.progress - this.PROGRESS_LOSS);
+            game.progress = Math.max(this.MIN_PROGRESS, game.progress - this.PROGRESS_LOSS);
         }
-
+        
         // Check win/lose conditions
-        if (this.progress >= this.MAX_PROGRESS && this.currentCatch) {
-            console.log("Fish caught!");
-            this.isReeling = false;
-            
-            // Hide reeling UI first
-            player.ui.sendData({
-                type: 'hideReeling'
-            });
-
-            const fishDetails = this.getFishDetails(this.currentCatch);
-            if (fishDetails) {
-                this.inventoryManager.addItem(player, {
-                    id: this.currentCatch.id,
-                    modelId: fishDetails.modelUri,
-                    type: 'fish',
-                    name: this.currentCatch.name,
-                    rarity: this.currentCatch.rarity as ItemRarity,
-                    value: this.currentCatch.value,
-                    quantity: 1,
-                    metadata: {
-                        fishStats: {
-                            weight: this.currentCatch.weight,
-                            size: 0,
-                            species: this.currentCatch.name
-                        }
-                    }
-                });
-
-                if (this.levelingSystem?.calculateFishXP) {
-                    const xpGained = this.levelingSystem.calculateFishXP({
-                        ...this.currentCatch,
-                        rarity: this.currentCatch.rarity.toLowerCase() as "common" | "uncommon" | "rare" | "epic" | "legendary",
-                        minWeight: fishDetails.minWeight
-                    });
-                    console.log("XP gained: ", xpGained);
-                    console.log("XP gained: ", xpGained);
-                    console.log("XP gained: ", xpGained);
-                    this.levelingSystem.addXP(player, xpGained);
-                }
-            }
-
-            player.ui.sendData({
-                type: "fishingStatus",
-                message: `Caught a ${this.currentCatch.rarity} ${this.currentCatch.name} weighing ${this.currentCatch.weight}lb!`
-            });
-
-            // Update inventory UI
-            player.ui.sendData({
-                type: 'inventoryUpdate',
-                inventory: this.inventoryManager.getInventory(player)
-            });
-
-            // Display the caught fish
-            this.displayFish(player, this.currentCatch);
-
-             // Hide status after delay
-            setTimeout(() => {
-                player.ui.sendData({
-                    type: "fishingStatus",
-                    message: null
-                });
-            }, 2000);
-            
-        } else if (this.progress <= this.MIN_PROGRESS) {
-            console.log("Fish got away!");
-            this.isReeling = false;
-            
-            // Hide reeling UI
-            player.ui.sendData({
-                type: 'hideReeling'
-            });
-            player.ui.sendData({
-                type: "fishingStatus",
-                message: "The fish got away!"
-            });
+         if (game.progress >= this.MAX_PROGRESS && game.currentCatch) {
+            this.handleSuccess(player, game.currentCatch);
+        } else if (game.progress <= this.MIN_PROGRESS) {
+            this.handleFailure(player);
         }
+
         // Send updates to UI
         player.ui.sendData({
             type: 'updateReeling',
-            fishPosition: this.fishPosition,
-            barPosition: this.barPosition,
-            progress: this.progress
+            fishPosition: game.fishPosition,
+            barPosition: game.barPosition,
+            progress: game.progress
         });
+    }
+
+    private calculateFishVelocity(fish: CaughtFish, playerLevel: number): number {
+        // Base speed that all fish start with
+        const BASE_SPEED = 2;
+        
+        // Value-based speed (logarithmic curve)
+        let valueMultiplier = 0;
+        if (fish.value <= 50) {
+            valueMultiplier = fish.value * 0.02;  // Linear up to 50
+        } else if (fish.value <= 200) {
+            valueMultiplier = 1 + Math.log10(fish.value - 49) * 0.5;  // Slower growth 50-200
+        } else {
+            valueMultiplier = 1.5 + Math.log10(fish.value - 199) * 0.2;  // Very slow growth 200+
+        }
+
+        // Player level reduces difficulty (diminishing returns)
+        const levelBonus = 1 - (Math.log10(playerLevel + 1) * 0.15);  // 15% reduction at level 10, 20% at level 20
+
+
+        // Calculate final velocity with all factors
+        const finalVelocity = BASE_SPEED + (valueMultiplier * levelBonus);
+
+        return finalVelocity;
+    }
+
+    private handleSuccess(player: Player, fish: CaughtFish) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+
+        state.fishing.reelingGame.isReeling = false;
+        
+        // Hide reeling UI
+        player.ui.sendData({
+            type: 'hideReeling'
+        });
+
+        console.log("Fish caught!");
+        if (!state.fishing.reelingGame.currentCatch) return;
+        const fishDetails = this.getFishDetails(state.fishing.reelingGame.currentCatch);
+        if (fishDetails) {
+        // Add to inventory through state manager
+        this.stateManager.addInventoryItem(player, {
+            id: fish.id,
+            modelId: fishDetails.modelUri,
+            type: 'fish',
+             name: fish.name,
+            rarity: fish.rarity as ItemRarity,
+            value: fish.value,
+            quantity: 1,
+            metadata: {
+                fishStats: {
+                    weight: fish.weight,
+                    size: 0,
+                    species: fish.name
+                }
+            }
+        });
+
+        // Calculate and grant XP
+        if (this.levelingSystem?.calculateFishXP) {
+            const xpGained = this.levelingSystem.calculateFishXP({
+                ...fish,
+                rarity: fish.rarity.toLowerCase() as "common" | "uncommon" | "rare" | "epic" | "legendary",
+                minWeight: fishDetails.minWeight
+            });
+            console.log("XP gained: ", xpGained);
+            this.levelingSystem.addXP(player, xpGained);
+        }
+
+        this.messageManager.sendGameMessage(`Caught a ${fish.rarity} ${fish.name} weighing ${fish.weight}lb!`, player);
+
+        // Update inventory UI
+        player.ui.sendData({
+            type: 'inventoryUpdate',
+            inventory: this.inventoryManager.getInventory(player)
+        });
+
+        // Display the caught fish
+        this.displayFish(player, fish);
+        }
+    }
+
+    private handleFailure(player: Player) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+
+        state.fishing.reelingGame.isReeling = false;
+        
+        player.ui.sendData({
+            type: 'hideReeling'
+        });
+        this.messageManager.sendGameMessage("The fish got away!", player);
     }
 
     private getFishDetails(caughtFish: CaughtFish) {
@@ -472,14 +563,12 @@ class ReelingGame {
             name: 'displayFish',
             modelUri: fishData.modelData.modelUri,
             modelScale: scaleMultiplier,
-           // modelLoopedAnimations: ['swim'],
+            modelLoopedAnimations: ['swim'],
             parent: playerEntity,
-            rigidBodyOptions: {
-                angularVelocity: { x: 0, y: Math.PI / 1.5, z: 0 }
-            }
         });
         
-        displayEntity.spawn(this.world, { x: 0, y: 3, z: 0 });
+        displayEntity.spawn(this.world, { x: 0, y: 2.2, z: 0 });
+        displayEntity.setAngularVelocity({ x: 0, y: Math.PI / 1.5, z: 0 });
 
         // Rotate animation
         let startTime = Date.now();

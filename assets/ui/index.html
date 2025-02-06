@@ -31,8 +31,8 @@
 
         /* Individual slot styling */
         .slot {
-            width: 100px;
-            height: 100px;
+            width: min(8vw, 100px);      
+            height: min(8vw, 100px);    
             background: rgba(0, 0, 0, 0.7);
             border: 2px solid #666;
             color: white;
@@ -49,14 +49,14 @@
         }
 
         .slot-number {
-            font-size: 12px;
+            font-size: min(1.2vw, 12px);
             opacity: 0.7;
             user-select: none;
             -webkit-user-select: none;
         }
 
         .slot-name {
-            font-size: 14px;
+            font-size: min(1.4vw, 14px);
             text-align: center;
             user-select: none;
             -webkit-user-select: none;
@@ -65,7 +65,7 @@
         /* Equipment Menu - Main popup for inventory management */
         #equipment-menu {
             position: fixed;
-            top: 50%;
+            top: 45%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.9);
@@ -225,113 +225,6 @@
             }
         }
 
-        /* =========================================
-           Agent UI Styles - Chat bubbles and thought panel
-           ========================================= */
-        /* Agent chat bubble container */
-        .agent-chat {
-            position: relative;
-            min-width: 150px;
-            max-width: 300px;
-        }
-
-        /* Agent name header */
-        .agent-header {
-            text-align: center;
-            margin-bottom: 5px;
-        }
-
-        .agent-name {
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            display: inline-block;
-            font-size: 14px;
-        }
-
-        /* Chat bubble styling */
-        .chat-bubble {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            position: relative;
-            margin-bottom: 10px;
-            transition: opacity 0.3s;
-        }
-
-        /* Chat bubble pointer */
-        .chat-bubble:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: rgba(0, 0, 0, 0.8);
-        }
-
-        .chat-bubble.fade {
-            opacity: 0;
-        }
-
-        /* Floating message above agent */
-        .float-message {
-            text-align: center;
-            color: white;
-            font-size: 14px;
-            text-shadow: 0 0 3px black;
-            position: absolute;
-            width: 100%;
-            top: -20px;
-        }
-
-        /* Agent thoughts panel */
-        #agent-thoughts-panel {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #666;
-            color: white;
-            padding: 15px;
-            width: 300px;
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 5px;
-            display: none;
-        }
-
-        /* Individual thought entry */
-        .thought-entry {
-            border-bottom: 1px solid #444;
-            padding: 10px 0;
-        }
-
-        .thought-agent-name {
-            font-weight: bold;
-            color: #4a9eff;
-            margin-bottom: 5px;
-        }
-
-        .thought-text {
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        /* Agent inventory display */
-        .inventory-list {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #999;
-        }
-
-        .inventory-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-        }
 
         /* =========================================
            Fish Collection Styles - Grid layout and cards
@@ -348,7 +241,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 10px;
-            padding: 10px;
+            padding-bottom: 200px;
         }
 
         /* Custom scrollbar styling */
@@ -529,8 +422,8 @@
             left: 60%;  /* Match casting meter position */
             top: 50%;
             transform: translateY(-50%);
-            width: 100px;
-            height: 300px;
+            width: min(8vw, 100px);     /* 8% of viewport width, max 100px */
+            height: min(40vh, 300px);   /* 40% of viewport height, max 300px */
             background: rgba(0, 100, 255, 0.2);
             border: 2px solid #fff;
             z-index: 1000;
@@ -543,6 +436,17 @@
             width: 100%;
             height: 33.33%;
             border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .fishing-instructions {
+            position: absolute;
+            bottom: min(-6vh, -30px);  /* 4% of viewport height, min -25px */
+            width: 100%;
+            text-align: center;
+            color: rgba(0, 0, 0, 0.5);
+            font-size: min(1.8vh, 14px);  /* 1.8% of viewport height, max 14px */
+            font-family: Arial, sans-serif;
+            font-weight: bold;
         }
 
         #fish-marker {
@@ -568,22 +472,23 @@
             position: fixed;
             left: 50%;
             bottom: 20%;
+            padding-bottom: 80px;
             transform: translateX(-50%);
-            width: 80%;
-            max-width: 600px;
+            width: min(60vw, 600px); /* 80% of viewport width, max 800px */
+            min-width: 300px; /* Minimum width to maintain playability */
         }
 
         .tension-bar {
-            height: 40px;
+            height: min(6vh, 40px); /* 6% of viewport height, max 40px */
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid white;
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: min(3vh, 20px);
         }
 
         .target-zone {
             position: absolute;
-            width: 20%;
+            width: 20%; /* Keep this percentage-based */
             height: 100%;
             background: rgba(255, 255, 255, 0.3);
             border-left: 2px solid white;
@@ -593,16 +498,17 @@
 
         #reel-fish-marker {
             position: absolute;
-            width: 4px;
+            width: min(0.5vw, 4px); /* 0.5% of viewport width, max 4px */
             height: 100%;
-            background: #ffeb3b; /* Yellow for fish */
+            background: #ffeb3b;
             transition: left 0.1s;
         }
 
         .progress-bar {
-            height: 20px;
+            height: min(3vh, 20px); /* 3% of viewport height, max 20px */
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid white;
+            margin-bottom: min(2vh, 10px);  
         }
 
         #reel-progress-fill {
@@ -611,12 +517,254 @@
             width: 0%;
             transition: width 0.1s;
         }
-    </style>
-</head>
-<body>
+
+
+        .reeling-instructions {
+            position: absolute;
+            bottom: min(-6vh, -30px);
+            padding-bottom: 80px;
+            width: 100%;
+            text-align: center;
+            color: rgba(7, 7, 7, 0.5);
+            font-size: min(2.2vh, 20px);
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        .merchant-dialog {
+            background: rgb(0, 0, 0);
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+            width: min(40vw, 400px);  /* 40% of viewport width, max 400px */
+            max-height: min(60vh, 500px); 
+        }
+        .merchant-dialog button {
+            
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px;
+            background: #444;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+
+        /* =========================================
+           Currency UI Styles - Minimalist corner display
+           ========================================= */
+        .currency-display {
+            position: fixed;
+            bottom: 60px;  /* Position above level UI */
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            color: #FFD700;  /* Gold color for coins */
+            font-family: 'Arial', sans-serif;
+            font-size: 16px;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .coin-icon {
+            font-size: 14px;
+        }
+
+        #shop-panel {
+            position: absolute;
+            right: 20px;
+            top: 100px;  /* Positioned below the player panel */
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        #shop-btn {
+            width: 200px;
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #shop-btn:hover {
+            background-color: #45a049;
+        }
+
+        #rod-list-panel {
+            position: absolute;
+            right: 240px;  /* Position next to shop button */
+            top: 100px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 300px;
+            display: none;  /* Hidden by default */
+        }
+
+        .rod-row {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;  /* Added to layout the button */
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rod-stats {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .rod-price {
+            color: gold;
+            margin-top: 4px;
+        }
+
+        .purchase-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .purchase-button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .close-shop-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .close-shop-button:hover {
+            color: white;
+        }
+
+        .empty-shop-state {
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .empty-shop-state .close-shop-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .empty-shop-state .close-shop-button:hover {
+            color: #ffffff;
+        }
+
+        /* =========================================
+           Game Updates Panel Styles
+         ========================================= */
+
+        #game-updates-panel {
+            position: fixed;
+            top: min(2vh, 20px);
+            right: min(2vh, 20px);
+            background: linear-gradient(to bottom, rgba(40, 40, 40, 0.92), rgba(25, 25, 25, 0.92));
+            border: 3px solid rgba(180, 180, 180, 0.4);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            width: min(30vw, 300px);
+            max-height: min(70vh, 500px);  /* Maximum height of 70% viewport or 500px */
+            overflow-y: auto;   
+            color: white;
+            opacity: 0.9;
+            font-family: 'Arial', sans-serif;
+            display: none; /* Hidden by default */
+        }
+
+        .update-message {
+            margin: min(0.8vh, 8px) 0;
+            padding: min(0.8vh, 8px);
+            background: rgba(30, 30, 30, 0.6);
+            border: min(0.1vh, 1px) solid rgba(200, 200, 200, 0.15);
+            border-radius: min(0.6vh, 6px);
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }        
+            
+        </style>
+        </head>
+        <body>
+
+     <!-- =========================================
+                Game Updates Panel
+     ========================================= -->
+            <div id="game-updates-panel">
+                <h3>Game Updates</h3>
+                <div id="updates-container"></div>
+            </div>
+     <!-- =========================================
+         Merchant UI 
+     ========================================= -->
+         <template id="merchant-dialog-template">
+            <div class="merchant-dialog">
+                <h3>Merchant</h3>
+                <div class="options"></div>
+            </div>
+        </template>
+
+
+
+        <div id="rod-list-panel">
+            <!-- Rod list will be populated here -->
+        </div>
+    
+
     <!-- =========================================
          Level UI - Player progression display
          ========================================= -->
+    <div id="currency-display" class="currency-display">
+        <span id="coin-amount">0</span>
+        <span class="coin-icon">🪙</span>
+    </div>
+
     <div id="level-panel">
         <div id="level-number">Lvl: 1</div>
         <div id="xp-bar">
@@ -644,16 +792,15 @@
             <div id="equipment-menu">
                 <div class="menu-header">
                     <h2>Equipment</h2>
-                    <span class="close-button" onclick="InventoryUI.toggleEquipmentMenu(false)">×</span>
+                    <span class="close-button">×</span>
                 </div>
                 <div class="tabs">
                     <button class="tab-button" data-tab="rods">Fishing Rods</button>
-                    <button class="tab-button" data-tab="bait">Bait</button>
+                  
                     <button class="tab-button" data-tab="fish">Fish Collection</button>
                 </div>
                 <!-- Tab content containers -->
                 <div id="rods-tab" class="tab-content"></div>
-                <div id="bait-tab" class="tab-content" style="display: none;"></div>
                 <div id="fish-tab" class="tab-content">
                     <div class="fish-grid" id="fish-grid"></div>
                 </div>
@@ -688,42 +835,6 @@
             </div>
         </div>
 
-        <!-- =========================================
-             Agent UI - NPC interaction interface
-             ========================================= -->
-        <div id="agents-ui">
-            <!-- Template for Agent Chat Bubble -->
-            <template id="agent-chat">
-                <div class="agent-chat">
-                    <div class="agent-header">
-                        <div class="agent-name"></div>
-                    </div>
-                    <div class="chat-bubble">
-                        <div class="message"></div>
-                    </div>
-                    <div class="float-message"></div>
-                </div>
-            </template>
-
-            <!-- Template for Floating Text -->
-            <template id="floating-text">
-                <div class="floating-text">
-                    <div class="float-message"></div>
-                </div>
-            </template>
-
-            <!-- Agent Thoughts Panel -->
-            <div id="agent-thoughts-panel">
-                <div class="panel-header">
-                    <h3>NPC Thoughts</h3>
-                    <button class="close-button" onclick="AgentUI.toggleThoughtsPanel()">×</button>
-                </div>
-                <div id="thoughts-container">
-                    <!-- Thoughts will be inserted here -->
-                </div>
-            </div>
-        </div>
-
         <div id="casting-power-container">
             <div id="casting-power-bar"></div>
         </div>
@@ -736,6 +847,7 @@
             <div class="depth-marker" style="top: 66.66%"></div>
             <div id="line-marker"></div>
             <div id="fish-marker"></div>
+            <div class="fishing-instructions">Tap Q to bob for Depth!</div>
         </div>
 
         <!-- Add new reeling game container (keeping existing fishing-game div unchanged) -->
@@ -752,6 +864,10 @@
             <div id="reel-progress" class="progress-bar">
                 <div id="reel-progress-fill"></div>
             </div>
+            <div class="reeling-instructions">
+                Press Q to move the catch bar<br>
+                Trap the fish to fill the progress meter!
+            </div>
         </div>
     </div>
 
@@ -763,6 +879,7 @@
             currentRod: null,
             lastEquippedRod: null,
             equipmentMenuOpen: false,
+            isMerchantDialogOpen: false,
 
             // Initialize inventory system and event listeners
             init() {
@@ -770,15 +887,27 @@
                 document.addEventListener('keydown', (e) => {
                     if (e.key === '1') {
                         this.toggleRod();
-                    } else if (e.key === '2') {
+                    } else if (e.key === '2' && this.isMerchantDialogOpen == false) {
                         this.toggleEquipmentMenu();
                     }
                 });
+                
+                // Add persistent click handler for toolbar slots
+                document.getElementById('toolbar').addEventListener('click', (e) => {
+                    const target = e.target.closest('.slot');
+                    if (!target) return;
 
-                // Prevent click-through on menu
-                const menu = document.getElementById('equipment-menu');
-                menu.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                    if (target.id === 'slot-2') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Toggle Equipment Menu");
+                        this.toggleEquipmentMenu(true);
+                    } else if (target.id === 'slot-1') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Toggle Fishing Rod");
+                        this.toggleRod(true);
+                    }
                 });
 
                 // Handle game data updates
@@ -788,6 +917,45 @@
                         console.log('Updated inventory:', data.inventory);  // Debug log
                         this.updateInventoryDisplay(data.inventory);
                         this.updateFishCollection(data.inventory);
+                    }
+                });
+
+                hytopia.onData((data) => {
+                    console.log("UI received message:", data);
+                    if (data.type === 'showMerchantDialog') {
+                        this.isMerchantDialogOpen = true;
+                    } else if (data.type === 'hideMerchantDialog') {
+                        console.log("Hiding merchant dialog");
+                        const menu = document.getElementById('merchant-dialog');
+                        if (menu) {
+                            menu.style.display = 'none';
+                            menu.style.pointerEvents = 'none';
+                        }
+                        this.isMerchantDialogOpen = false;
+                        this.$forceUpdate && this.$forceUpdate();
+                        // Force a DOM update
+                        document.querySelector('.merchant-dialog')?.remove();
+                    } else if (data.type === 'hideRodStore') {
+                        const rodList = document.getElementById('rod-list-panel');
+                        if (rodList) {
+                            rodList.style.display = 'none';
+                        }
+                        this.isMerchantDialogOpen = false;
+                    }   if (data.type === 'merchantSpeak') {
+                        const dialog = document.querySelector('.merchant-dialog');
+                        const options = dialog.querySelector('.options');
+                        
+                        // Clear existing options
+                        options.innerHTML = '';
+                        
+                        // Add merchant's message
+                        options.innerHTML = `<div class="merchant-message">${data.message}</div>`;
+                    }
+                });
+
+                hytopia.onData((data) => {
+                    if (data.type === 'currencyUpdate') {
+                        document.getElementById('coin-amount').textContent = data.currency.coins.toLocaleString();
                     }
                 });
 
@@ -814,7 +982,37 @@
                             });
                         }
                     }
-                }, true);  // Use capture phase
+                }, true);
+                
+                               // Add click handlers for equip buttons
+                document.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target && target.classList.contains('equip-fish-button')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const fishId = target.getAttribute('data-fish-id');
+                        if (fishId) {
+                            console.log('Attempting to equip fish:', fishId);
+                            hytopia.sendData({
+                                type: 'equipItem',
+                                itemId: fishId
+                            });
+                        }
+                    } else if (target && target.classList.contains('use-bait-button')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const fishId = target.getAttribute('data-fish-id');
+                        if (fishId) {
+                            console.log('Attempting to use bait:', fishId);
+                            hytopia.sendData({
+                                type: 'useBait',
+                                itemId: fishId
+                            });
+                        }
+                    }
+                }, true); // Use capture phase
 
                 // Add tab button handler
                 document.addEventListener('click', (e) => {
@@ -827,11 +1025,16 @@
                         if (tabName) {
                             this.showTab(tabName);
                             // Update active state
+                            console.log("query1");
                             document.querySelectorAll('.tab-button').forEach(btn => {
                                 btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
                             });
                         }
-                    }
+                    } else if (target && target.classList.contains('close-button')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.toggleEquipmentMenu(false);
+                    } 
                 }, true);
             },
 
@@ -901,9 +1104,9 @@
                         <div class="rod-info">
                             <div class="rod-name">${rod.name}</div>
                             <div class="rod-stats">
-                                <span>Speed: ${rod.metadata.rodStats.catchSpeed}</span>
+                                <span>Max Weight: ${rod.metadata.rodStats.maxCatchWeight}lb</span>
                                 <span>Luck: ${rod.metadata.rodStats.luck}</span>
-                                <span>Range: ${rod.metadata.rodStats.maxDistance}m</span>
+                                <span>Range: ${rod.metadata.rodStats.maxDistance} Blocks</span>
                             </div>
                         </div>
                         <button class="equip-button" data-rod-id="${rod.id}">
@@ -929,7 +1132,6 @@
                 this.toggleEquipmentMenu(false);
             },
 
-            // Update fish collection display
             updateFishCollection(inventory) {
                 const fishGrid = document.getElementById('fish-grid');
                 if (!fishGrid) return;
@@ -942,15 +1144,30 @@
                     const card = document.createElement('div');
                     card.className = `fish-card ${fish.rarity}`;
                     card.innerHTML = `
-                        <div class="fish-name">${fish.name}</div>
-                        <div class="fish-stats">
-                            Rarity: ${fish.rarity}<br>
-                            Weight: ${fish.metadata.fishStats.weight}lb<br>
-                            Size: ${fish.metadata.fishStats.size}cm
+                        <div class="fish-info">
+                            <div class="fish-name">${fish.name}</div>
+                            <div class="fish-stats">
+                                Rarity: ${fish.rarity}<br>
+                                Weight: ${fish.metadata.fishStats.weight}lb<br>
+                                Size: ${fish.metadata.fishStats.size}cm
+                            </div>
+                            <div class="fish-value">${fish.value} coins</div>
                         </div>
-                        <div class="fish-value">${fish.value} coins</div>
+                        <button class="equip-fish-button" data-fish-id="${fish.id}">
+                            ${fish.equipped ? 'Equipped' : 'Equip'}
+                        </button>
+                        ${fish.name === 'Sardine' && !fish.metadata.fishStats.baited ? `
+                            <button class="use-bait-button" data-fish-id="${fish.id}">
+                                Use Bait
+                            </button>
+                        ` : ''}
                     `;
                     fishGrid.appendChild(card);
+
+                    if (fish.equipped) {
+                        this.currentFish = fish.id;
+                        this.lastEquippedFish = fish.id;
+                    }
                 });
 
                 if (fishItems.length === 0) {
@@ -992,15 +1209,21 @@
                         const reelingGame = document.getElementById('reeling-minigame');                        
                         if (reelingGame) {
                             reelingGame.style.display = 'block';
-                            console.log("Set display to block");
+                            console.log("Reeling game display set to block");
                         } else {
                             console.error("Could not find reeling-minigame element!");
                         }
                     }
                     else if (data.type === 'updateReeling') {
+                        console.log("Updating reeling UI:", data);  // Add this log
                         const fishMarker = document.getElementById('reel-fish-marker');
                         const targetZone = document.getElementById('reel-target-zone');
-                        const progressFill = document.getElementById('reel-progress-fill');                        
+                        const progressFill = document.getElementById('reel-progress-fill');
+                        console.log("Found elements:", {  // Add this log
+                            fishMarker: !!fishMarker,
+                            targetZone: !!targetZone,
+                             progressFill: !!progressFill
+                        });                        
                         // Update fish and target zone (existing code)
                         if (fishMarker) {
                             fishMarker.style.left = `${data.fishPosition * 100}%`;
@@ -1075,118 +1298,40 @@
             // Initialize agent system
             init() {
                 this.registerTemplates();
-
-                hytopia.onData((data) => {
-                    if (data.type === 'agentThoughts') {
-                        this.updateThoughts(data.agents);
-                    }
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab') {
-                        e.preventDefault();
-                        this.toggleThoughtsPanel();
-                    }
-                });
             },
 
             // Register UI templates for agent interactions
             registerTemplates() {
-                // Chat bubble template
-                hytopia.registerSceneUITemplate('agent-chat', (id, onState) => {
-                    const element = document.getElementById('agent-chat').content.cloneNode(true);
-                    const container = element.querySelector('.agent-chat');
-                    const bubble = container.querySelector('.chat-bubble');
-                    const messageEl = container.querySelector('.message');
-                    
-                    let fadeTimeout;
-                    
-                    onState(data => {
-                        const nameEl = container.querySelector('.agent-name');
-                        if (nameEl && data.agentName) {
-                            nameEl.textContent = data.agentName;
-                        }
 
-                        if (data.message) {
-                            clearTimeout(fadeTimeout);
-                            messageEl.textContent = data.message;
-                            bubble.classList.remove('fade');
-                            bubble.style.display = 'block';
-
-                            fadeTimeout = setTimeout(() => {
-                                bubble.classList.add('fade');
-                                setTimeout(() => {
-                                    bubble.style.display = 'none';
-                                }, 300);
-                            }, 5000);
-                        } else {
-                            bubble.style.display = 'none';
-                        }
-
-                        const floatEl = container.querySelector('.float-message');
-                        if (floatEl && data.floatMessage) {
-                            floatEl.textContent = data.floatMessage;
-                            floatEl.style.display = 'block';
-                        } else if (floatEl) {
-                            floatEl.style.display = 'none';
-                        }
+                // =========================================
+                // Merchant System - Manages merchant interactions and UI
+                // =========================================
+                //Merchant Dialog
+                hytopia.registerSceneUITemplate('merchant-dialog', (id, onState) => {
+                const template = document.getElementById('merchant-dialog-template');
+                const clone = template.content.cloneNode(true);
+                const optionsContainer = clone.querySelector('.options');
+            
+                onState(state => {
+                    optionsContainer.innerHTML = '';
+                    state.options.forEach((option, index) => {
+                        const div = document.createElement('div');
+                        div.textContent = `[${index + 1}] ${option}`; // Show 1-5 instead of a-e
+                        optionsContainer.appendChild(div);
                     });
-                    
-                    return element;
                 });
-
-                // Floating text template
-                hytopia.registerSceneUITemplate('floating-text', (id, onState) => {
-                    const element = document.getElementById('floating-text').content.cloneNode(true);
-                    const messageEl = element.querySelector('.float-message');
-                    
-                    onState(data => {
-                        if (data.floatMessage) {
-                            messageEl.textContent = data.floatMessage;
-                            messageEl.style.display = 'block';
-                        } else {
-                            messageEl.style.display = 'none';
-                        }
-                    });
-                    
-                    return element;
-                });
-            },
-
-            // Update agent thoughts panel
-            updateThoughts(agents) {
-                const container = document.getElementById('thoughts-container');
-                container.innerHTML = agents.map(agent => `
-                    <div class="thought-entry">
-                        <div class="thought-agent-name">${agent.name}</div>
-                        <div class="thought-text">${agent.lastThought}</div>
-                        ${this.renderAgentInventory(agent.inventory)}
-                    </div>
-                `).join('');
-            },
-
-            // Render agent inventory display
-            renderAgentInventory(inventory) {
-                if (!inventory || inventory.length === 0) return '';
                 
-                return `
-                    <div class="inventory-list">
-                        ${inventory.map(item => `
-                            <div class="inventory-item">
-                                <span class="inventory-item-name">${item.name}</span>
-                                <span class="inventory-item-quantity">x${item.quantity}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                return clone;
+                });
+
+                // Rod Shop Dialog
+                hytopia.registerSceneUITemplate('rod-shop', (id, onState) => {
+                    const template = document.getElementById('rod-shop-template');
+                    const clone = template.content.cloneNode(true);               
+                    return clone;
+                });
             },
 
-            // Toggle thoughts panel visibility
-            toggleThoughtsPanel() {
-                this.thoughtsPanelVisible = !this.thoughtsPanelVisible;
-                document.getElementById('agent-thoughts-panel').style.display = 
-                    this.thoughtsPanelVisible ? 'block' : 'none';
-            }
         };
 
         // =========================================
@@ -1199,6 +1344,9 @@
                     if (data.type === 'levelUpdate') {
                         this.updateLevelDisplay(data);
                     }
+                    if (data.type === 'currencyUpdate') {
+                        document.getElementById('coin-amount').textContent = data.currency.coins.toLocaleString();
+                    }
                 });
             },
 
@@ -1206,17 +1354,11 @@
             updateLevelDisplay(data) {
                 const levelNumber = document.getElementById('level-number');
                 const xpFill = document.getElementById('xp-fill');
-                const xpText = document.getElementById('xp-text');
-
                 // Update level number
                 levelNumber.textContent = `Level ${data.level}`;
-
                 // Calculate XP progress percentage
                 const progress = (data.currentXP / data.requiredXP) * 100;
                 xpFill.style.width = `${progress}%`;
-
-                // Update XP text
-                xpText.textContent = `${data.currentXP} / ${data.requiredXP} XP`;
             }
         };
 
@@ -1229,9 +1371,6 @@
                 hytopia.onData((data) => {
                    // console.log("UI received data:", data);
                      // Debug all incoming data
-                     if (data.type === 'startReeling') {
-                        console.log("Starting reeling UI");
-                     }
                     if (data.type === 'castingPowerUpdate') {
                         const powerBar = document.getElementById('casting-power-container');
                         if (data.power === null) {
@@ -1259,6 +1398,182 @@
             }
         };
 
+            // ... existing scripts ...
+
+        // Add shop button listener
+
+        // Handle received data from server
+        hytopia.onData(data => {
+            if (data.type === 'showRodShop') {
+                console.log('Received rod data:', data.rods);
+                setupRodShop(data);
+            } else if (data.type === 'updateRodShop') {
+                // Handle shop updates after purchase
+                setupRodShop(data);
+            }
+        });
+        // Create a function to handle shop setup
+        function setupRodShop(data) {
+            const rodListPanel = document.getElementById('rod-list-panel');
+            
+            // Clear existing content and listeners
+            rodListPanel.innerHTML = '<h3 style="color: white; margin-bottom: 10px;">Available Rods</h3>';
+            
+            // Show panel and disable player input
+            rodListPanel.style.display = 'block';
+            hytopia.sendData({ type: 'disablePlayerInput' });
+
+            if (data.rods.length === 0) {
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'close-shop-button';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = () => {
+                    console.log('Close button clicked');
+                    rodListPanel.style.display = 'none';
+                    isShopOpen = false;
+                    hytopia.sendData({ type: 'enablePlayerInput' });
+                };
+
+                rodListPanel.innerHTML = `
+                    <div class="empty-shop-state">
+                        <button class="close-shop-button">×</button>
+                        <h3 style="color: white; margin-bottom: 10px;">No Rods Available</h3>
+                        <p style="color: #ccc; text-align: center;">
+                            Check back after you level up!<br>
+                            Higher levels unlock better fishing rods.
+                        </p>
+                    </div>
+                `;
+
+                // Add the close button event listener
+                rodListPanel.querySelector('.close-shop-button').onclick = closeBtn.onclick;
+                return;
+            } else {
+                   // Create rod list
+                data.rods.forEach(rod => {
+                    const rodRow = document.createElement('div');
+                    rodRow.className = 'rod-row';
+                    rodRow.innerHTML = `
+                        <div class="rod-info">
+                            <button class="close-shop-button">×</button>
+                            <div class="rod-name">${rod.name}</div>
+                            <div class="rod-stats">
+                                Speed: ${rod.metadata.rodStats.catchSpeed} | 
+                                Luck: ${rod.metadata.rodStats.luck} | 
+                                Range: ${rod.metadata.rodStats.maxDistance}m
+                            </div>
+                            <div class="rod-price">${rod.value} coins</div>
+                        </div>
+                        <button 
+                            class="purchase-button" 
+                            data-rod-id="${rod.id}"
+                            ${data.playerCoins < rod.value ? 'disabled' : ''}>
+                            ${data.playerCoins < rod.value ? 'Not enough coins' : 'Purchase'}
+                        </button>
+                    `;
+                    rodListPanel.appendChild(rodRow);
+                });
+            }
+            // Attach event listeners
+            attachShopListeners();
+        }
+
+        // Separate function for attaching listeners
+        function attachShopListeners() {
+            const rodListPanel = document.getElementById('rod-list-panel');
+            
+            // Close button listeners
+            rodListPanel.querySelectorAll('.close-shop-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    console.log('Closing shop');
+                    rodListPanel.style.display = 'none';
+                    hytopia.sendData({ type: 'enablePlayerInput' });
+                });
+            });
+
+            // Purchase button listeners
+            rodListPanel.querySelectorAll('.purchase-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const rodId = e.target.getAttribute('data-rod-id');
+                    if (rodId) {
+                        console.log('Attempting to purchase rod:', rodId);
+                        hytopia.sendData({
+                            type: 'purchaseRod',
+                            rodId: rodId
+                        });
+                    }
+                });
+            });
+        }
+
+            // Toggle panel with Tab key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault(); // Prevent default tab behavior
+                const panel = document.getElementById('game-updates-panel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Add this at the top of your script
+        const recentMessages = new Map(); // message -> timestamp
+
+        // Handle game updates
+        hytopia.onData(data => {
+            if (data.type === 'gameUpdate') {
+                console.log("Received game update:", data.message);
+                
+                // Check if we've shown this message recently (within 5 seconds)
+                const now = Date.now();
+                const lastShown = recentMessages.get(data.message);
+                if (lastShown && (now - lastShown) < 5000) {
+                    console.log("Duplicate message ignored:", data.message);
+                    return;
+                }
+                
+                // Update timestamp for this message
+                recentMessages.set(data.message, now);
+                
+                // Create and show message
+                const panel = document.getElementById('game-updates-panel');
+                panel.style.display = 'block';
+                const container = document.getElementById('updates-container');
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'update-message';
+                messageDiv.id = `message-${data.messageId}`; 
+                messageDiv.textContent = data.message;
+                
+                messageDiv.style.animation = 'fadeIn 0.3s ease-in';
+                container.insertBefore(messageDiv, container.firstChild);
+                
+                // Clean up old messages from our tracking Map
+                for (const [msg, timestamp] of recentMessages.entries()) {
+                    if (now - timestamp > 5000) {
+                        recentMessages.delete(msg);
+                    }
+                }
+            }
+            else if (data.type === 'removeGameMessage') {
+                console.log("Attempting to remove message:", data.messageId);
+                const messageToRemove = document.getElementById(`message-${data.messageId}`);
+                if (messageToRemove) {
+                    console.log("Found message to remove:", messageToRemove);
+                    messageToRemove.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => {
+                        messageToRemove.remove();
+                        const container = document.getElementById('updates-container');
+                        if (!container.hasChildNodes()) {
+                            document.getElementById('game-updates-panel').style.display = 'none';
+                        }
+                        console.log("Message removed. Remaining messages:", container.innerHTML);
+                    }, 300);
+                } else {
+                    console.log("Message to remove not found:", data.messageId);
+                }
+            }
+        });
+
         // Initialize all UI systems
         InventoryUI.init();
         FishingUI.init();
@@ -1269,6 +1584,11 @@
         // Initialize with equipment tab
         InventoryUI.showTab('rods');
 
+
+
     </script>
+
+
+
 </body>
 </html>

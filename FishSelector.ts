@@ -1,9 +1,11 @@
 import type { Player } from 'hytopia';
 import type { LevelingSystem } from './LevelingSystem';
 import type { FishData } from './fishCatalog';
-import { PIER_FISH_CATALOG } from './fishCatalog';
+import { PIER_FISH_CATALOG, isWaterBlock, WaterBlockType } from './fishCatalog';
 import type { InventoryManager } from './Inventory/InventoryManager';
 import type { World } from 'hytopia';
+import mapData from './assets/maps/map_test.json';
+import { getWaterZoneType, WaterZoneType } from './fishCatalog';
 
 export interface CaughtFish {
     id: string;        // Unique catch ID (e.g., "mackerel_1234567890")
@@ -13,6 +15,11 @@ export interface CaughtFish {
     value: number;     // Calculated value based on weight/rarity
 }
 
+interface BaitStatus {
+    isHooked: boolean;
+    weight?: number;
+}
+
 export class FishSelector {
     constructor(
         private world: World,
@@ -20,8 +27,8 @@ export class FishSelector {
         private levelingSystem: LevelingSystem
     ) {}
 
-    getFish(player: Player, depth: number): CaughtFish | null {
-        const selectedFish = this.selectFish(player, depth);
+    getFish(player: Player, depth: number, landingPos: { x: number, y: number, z: number }): CaughtFish | null {
+        const selectedFish = this.selectFish(player, depth, landingPos);
         if (selectedFish) {
             return this.generateCatch(selectedFish);
         }
@@ -35,26 +42,93 @@ export class FishSelector {
         deep: 0.6       // 60% base chance in deep
     };
 
-    private selectFish(player: Player, depth: number): FishData | null {
+    private selectFish(player: Player, depth: number, position: { x: number, y: number, z: number }): FishData | null {
+        const waterZone = this.getWaterZone(position);
+        if (!waterZone) return null;
+        
+        // If in open water, 40% chance for rare+ fish logic
+        if (waterZone === WaterZoneType.OPEN) {
+            const zoneRoll = Math.random() * 100;
+            
+            if (zoneRoll > 60) {  // 40% chance for rare fish logic
+                console.log("Player is in open water - forcing rare+ fish");
+                
+                const rareFish = PIER_FISH_CATALOG.fish.filter(fish => 
+                    fish.rarity === 'rare' || 
+                    fish.rarity === 'epic' || 
+                    fish.rarity === 'legendary'
+                );
+
+                const roll = Math.random() * 100;
+                
+                if (roll < 33) {
+                    const rareFishOnly = rareFish.filter(fish => fish.rarity === 'rare');
+                    return rareFishOnly[Math.floor(Math.random() * rareFishOnly.length)];
+                } else if (roll < 66) {
+                    const epicFishOnly = rareFish.filter(fish => fish.rarity === 'epic');
+                    return epicFishOnly[Math.floor(Math.random() * epicFishOnly.length)];
+                } else {
+                    const legendaryFishOnly = rareFish.filter(fish => fish.rarity === 'legendary');
+                    return legendaryFishOnly[Math.floor(Math.random() * legendaryFishOnly.length)];
+                }
+            }
+        }
+
+        // 60% chance in open water or always in shore water
+        return this.selectShoreWaterFish(player, position);
+    }
+
+    // Move existing shore water logic to separate method
+    private selectShoreWaterFish(player: Player, position: { x: number, y: number, z: number }): FishData | null {
         const roll = Math.random() * 100;
         let cumulativeChance = 0;
-
-        // Get rod and skill modifiers
-        const rod = this.inventoryManager.getEquippedRod(player);
-        const luckBonus = rod?.metadata?.rodStats?.luck || 1;
-        const skillLevel = this.levelingSystem.getCurrentLevel(player);
-        const skillBonus = 0.5 + (skillLevel * 0.1);  // 50% base chance + 10% per level
         
-        const depthType = this.getDepthType(depth) as keyof typeof this.DEPTH_CATCH_RATES;
         for (const fish of PIER_FISH_CATALOG.fish) {
-            const depthChance = fish.spawnChances[depthType] * this.DEPTH_CATCH_RATES[depthType];
-            cumulativeChance += depthChance * luckBonus * skillBonus;
+            let baseChance = fish.waterZoneChances.shore;
+            cumulativeChance += baseChance;
             
             if (roll <= cumulativeChance) {
                 return fish;
             }
         }
         return null;
+    }
+
+    private getHotspotBonus(fish: FishData, position: { x: number, y: number, z: number }): number {
+        if (!fish.hotspots) return 1.0;
+    
+        let maxBonus = 1.0;
+        for (const hotspot of fish.hotspots) {
+            // Calculate horizontal distance only (ignoring y/height)
+            const distance = Math.sqrt(
+                Math.pow(position.x - hotspot.x, 2) +
+                Math.pow(position.z - hotspot.z, 2)
+            );
+    
+            // If within radius, consider this bonus
+            if (distance <= hotspot.radius) {
+                // Scale bonus based on horizontal distance
+                const scaledBonus = hotspot.bonus * (1 - (distance / hotspot.radius));
+                maxBonus = Math.max(maxBonus, scaledBonus);
+            }
+        }
+        return maxBonus;
+    }
+
+    private isBaitHooked(player: Player): BaitStatus {
+        const inventory = this.inventoryManager.getInventory(player);
+        if (!inventory) return { isHooked: false };
+
+        for (const item of inventory.items) {
+            if (item.metadata.fishStats?.baited) {
+                this.inventoryManager.useBait(player, item.id);
+                return {
+                    isHooked: true,
+                    weight: item.metadata.fishStats.weight
+                };
+            }
+        }
+        return { isHooked: false };
     }
 
     private getDepthType(depth: number): 'shallow' | 'mid' | 'deep' {
@@ -102,57 +176,17 @@ export class FishSelector {
             default: return 1;
         }
     }
-/*
-    private displayFish(fish: any) {
-        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(this.player)[0];
-        
-        // Remove any existing display fish
-        const existingDisplays = this.world.entityManager.getAllEntities().filter(
-            entity => entity.name === 'displayFish'
-        );
-        existingDisplays.forEach(entity => entity.despawn());
 
-        // Get fish data from catalog
-        const fishData = PIER_FISH_CATALOG.fish.find(f => f.name === fish.name);
-        if (!fishData) return;
-
-        // Calculate scale based on weight and fish type
-        const weightRatio = (fish.weight - fishData.minWeight) / (fishData.maxWeight - fishData.minWeight);
-        const scaleMultiplier = fishData.modelData.baseScale + 
-            (weightRatio * (fishData.modelData.maxScale - fishData.modelData.baseScale));
-
-        // Create new fish display with parent
-        const displayEntity = new Entity({
-            name: 'displayFish',
-            modelUri: fishData.modelData.modelUri,
-            modelScale: scaleMultiplier,
-            modelLoopedAnimations: ['swim'],
-            parent: playerEntity,
-            rigidBodyOptions: {
-                angularVelocity: { x: 0, y: Math.PI / 1.5, z: 0 }
-            }
-        });
-        
-        // Spawn at offset position
-        displayEntity.spawn(this.world, { x: 0, y: 3, z: 0 });
-
-        // Rotate 360 degrees over 3 seconds
-        let startTime = Date.now();
-        const duration = 3000;
-        
-        const rotateInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const progress = elapsed / duration;
-            
-            if (progress >= 1) {
-                clearInterval(rotateInterval);
-                displayEntity.despawn();
-                return;
-            }
-
-            // Rotate around Y axis
-            displayEntity.rotation.y = progress * Math.PI * 2;
-        }, 16);
+    private isWater(position: { x: number, y: number, z: number }): boolean {
+        const blockKey = `${Math.floor(position.x)},${Math.floor(position.y)},${Math.floor(position.z)}`;
+        const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
+        return isWaterBlock(blockTypeId);  // Using imported function
     }
-*/
+
+    private getWaterZone(position: { x: number, y: number, z: number }): WaterZoneType | null {
+        // First check if it's water at all (using your existing water check)
+        if (!this.isWater(position)) return null;
+        // If it is water, determine the zone
+        return getWaterZoneType(position);
+    }
 }
