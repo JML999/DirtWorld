@@ -92,7 +92,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Deep Sea Rod',
         type: 'rod',
         rarity: 'rare',
-        value: 5,
+        value: 2500,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -134,7 +134,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Fire Rod',
         type: 'rod',
         rarity: 'epic',
-        value: 5, //5000
+        value: 5000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -156,7 +156,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Ice Rod',
         type: 'rod',
         rarity: 'epic',
-        value: 5, // 5000
+        value:  5000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -178,7 +178,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Royal Rod',
         type: 'rod',
         rarity: 'legendary',
-        value: 100, // 100000
+        value:  100000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -199,7 +199,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Hytopian Rod',
         type: 'rod',
         rarity: 'legendary',
-        value: 250, // 250000
+        value:  250000,
         quantity: 1,
         metadata: {
             rodStats: {

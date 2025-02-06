@@ -320,8 +320,6 @@ export class FishingMiniGame {
         }
     }
 
-
-
 }
 
 class ReelingGame {
@@ -360,10 +358,33 @@ class ReelingGame {
         console.log("Reeling Start State:", state);
 
         // Calculate velocity based on fish value
-        const fishVelocity = this.calculateFishVelocity(
-            fish, 
-            this.levelingSystem.getCurrentLevel(player)
-        );
+        var fishVelocity = this.BASE_FISH_SPEED + (fish.value * this.VALUE_SPEED_MULTIPLIER);
+
+        // Reduce velocity for higher value fish
+        if (fish.value > 1000) {
+            fishVelocity *= 0.3;  // Only 30% of calculated speed
+        } else if (fish.value > 800) {
+            fishVelocity *= 0.4;
+        } else if (fish.value > 600) {
+            fishVelocity *= 0.5;
+        } else if (fish.value > 400) {
+            fishVelocity *= 0.6;
+        } else if (fish.value > 200) {
+            fishVelocity *= 0.7;
+        }
+
+         // Small additional reductions based on player level
+        const playerLevel = this.levelingSystem.getCurrentLevel(player);
+        if (playerLevel >= 20) {
+            fishVelocity *= 0.85;  // 15% reduction
+        } else if (playerLevel >= 15) {
+            fishVelocity *= 0.88;  // 12% reduction
+        } else if (playerLevel >= 10) {
+            fishVelocity *= 0.91;  // 9% reduction
+        } else if (playerLevel >= 5) {
+            fishVelocity *= 0.94;  // 6% reduction
+        }
+
 
         state.fishing.reelingGame = {
             isReeling: true,
@@ -428,30 +449,6 @@ class ReelingGame {
             barPosition: game.barPosition,
             progress: game.progress
         });
-    }
-
-    private calculateFishVelocity(fish: CaughtFish, playerLevel: number): number {
-        // Base speed that all fish start with
-        const BASE_SPEED = 2;
-        
-        // Value-based speed (logarithmic curve)
-        let valueMultiplier = 0;
-        if (fish.value <= 50) {
-            valueMultiplier = fish.value * 0.02;  // Linear up to 50
-        } else if (fish.value <= 200) {
-            valueMultiplier = 1 + Math.log10(fish.value - 49) * 0.5;  // Slower growth 50-200
-        } else {
-            valueMultiplier = 1.5 + Math.log10(fish.value - 199) * 0.2;  // Very slow growth 200+
-        }
-
-        // Player level reduces difficulty (diminishing returns)
-        const levelBonus = 1 - (Math.log10(playerLevel + 1) * 0.15);  // 15% reduction at level 10, 20% at level 20
-
-
-        // Calculate final velocity with all factors
-        const finalVelocity = BASE_SPEED + (valueMultiplier * levelBonus);
-
-        return finalVelocity;
     }
 
     private handleSuccess(player: Player, fish: CaughtFish) {

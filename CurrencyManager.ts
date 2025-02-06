@@ -12,7 +12,7 @@ export class CurrencyManager {
 
     initializePlayer(player: Player) {
         this.currencies.set(player.id, {
-            coins: 200
+            coins: 0
         });
         this.updateCurrencyUI(player);
     }

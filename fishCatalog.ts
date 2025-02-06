@@ -373,7 +373,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
             },
             minWeight: 500,
             maxWeight: 1000,
-            baseValue: 500,
+            baseValue: 120,
             modelData: {
                 modelUri: 'models/npcs/hammerhead_shark.gltf',
                 baseScale: 1.0,
@@ -400,7 +400,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
             },
             minWeight: 50,
             maxWeight: 1000,
-            baseValue: 1000,
+            baseValue: 400,
             modelData: {
                 modelUri: 'models/npcs/gold_swordfish.gltf',
                 baseScale: 1.0,

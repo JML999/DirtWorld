@@ -307,13 +307,13 @@ export class MerchantManager {
             switch(rod.rarity) {
                 case 'common':
                 case 'uncommon':
-                    return level >= 0; // 5
+                    return level >= 5; // 5
                 case 'rare':
-                    return level >= 3; // 10
+                    return level >= 10; // 10
                 case 'epic':
-                    return level >= 4; // 20 
+                    return level >= 20; // 20 
                 case 'legendary':
-                    return level >= 5; // 30
+                    return level >= 30; // 30
                 default:
                     return false;
             }
