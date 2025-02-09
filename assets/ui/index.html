@@ -318,6 +318,28 @@
             margin-top: 4px;
         }
 
+        #rods-tab {
+            max-height: 400px; /* Adjust this value to match your UI */
+            overflow-y: auto;
+            padding-right: 5px;
+            padding-bottom: 200px;
+        }
+
+        /* Optional: Style the scrollbar */
+        #rods-tab::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #rods-tab::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        #rods-tab::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
         /* =========================================
            Level UI Styles - Minimalist corner display
            ========================================= */
@@ -1086,7 +1108,6 @@
                 document.querySelector(`[onclick="InventoryUI.showTab('${tabName}')"]`).classList.add('active');
             },
 
-            // Update inventory display with new data
             updateInventoryDisplay(inventory) {
                 const rodsTab = document.getElementById('rods-tab');
                 rodsTab.innerHTML = '';
@@ -1096,8 +1117,13 @@
                 const equippedRod = inventory.items.find(item => item.type === 'rod' && item.equipped);
                 currentRodElement.textContent = equippedRod ? equippedRod.name : 'No Rod';
 
+                // Sort rods to show newest first (assuming newer items are added to end of array)
+                const sortedRods = inventory.items
+                    .filter(item => item.type === 'rod')
+                    .reverse(); // Reverse the array to show newest first
+
                 // Update rod list
-                inventory.items.filter(item => item.type === 'rod').forEach(rod => {
+                sortedRods.forEach(rod => {
                     const rodElement = document.createElement('div');
                     rodElement.className = 'rod-item' + (rod.equipped ? ' equipped' : '');
                     rodElement.innerHTML = `
@@ -1143,6 +1169,49 @@
                 fishItems.forEach(fish => {
                     const card = document.createElement('div');
                     card.className = `fish-card ${fish.rarity}`;
+                    card.innerHTML = `
+                        <div class="fish-info">
+                            <div class="fish-name">${fish.name}</div>
+                            <div class="fish-stats">
+                                Rarity: ${fish.rarity}<br>
+                                Weight: ${fish.metadata.fishStats.weight}lb<br>
+                                Size: ${fish.metadata.fishStats.size}cm
+                            </div>
+                            <div class="fish-value">${fish.value} coins</div>
+                        </div>
+                        <button class="equip-fish-button" data-fish-id="${fish.id}">
+                            ${fish.equipped ? 'Equipped' : 'Equip'}
+                        </button>
+                        ${fish.name === 'Sardine' && !fish.metadata.fishStats.baited ? `
+                            <button class="use-bait-button" data-fish-id="${fish.id}">
+                                Use Bait
+                            </button>
+                        ` : ''}
+                    `;
+                    fishGrid.appendChild(card);
+
+                    if (fish.equipped) {
+                        this.currentFish = fish.id;
+                        this.lastEquippedFish = fish.id;
+                    }
+                });
+
+                if (fishItems.length === 0) {
+                    fishGrid.innerHTML = '<div class="empty-message">No fish caught yet!</div>';
+                }
+            },
+
+            updateRodCollection(inventory) {
+                const rodGrid = document.getElementById('rod-grid');
+                if (!rodGrid) return;
+
+                rodGrid.innerHTML = '';
+                
+                const rodItems = inventory.items.filter(item => item.type === 'rod');
+                
+                rodItems.forEach(fish => {
+                    const card = document.createElement('div');
+                    card.className = `rod-card ${fish.rarity}`;
                     card.innerHTML = `
                         <div class="fish-info">
                             <div class="fish-name">${fish.name}</div>

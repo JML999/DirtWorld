@@ -139,19 +139,6 @@ startServer(world => {
             modelLoopedAnimations: ["idle"]
         });
 
-        console.log("Player entity status:", {
-          isSpawned: playerEntity.isSpawned,
-          hasModel: !!playerEntity.modelUri,
-          position: playerEntity.position,
-          parent: !!playerEntity.parent,
-          world: !!playerEntity.world,
-          animations: playerEntity.modelLoopedAnimations,
-          scale: playerEntity.modelScale,
-          rigidBody: !!playerEntity.rawRigidBody,
-          controller: !!playerEntity.controller,
-          id: playerEntity.id
-      });
-
         playerEntity.controller!.onTick = (entity: Entity, deltaTimeMs: number) => {
           const playerEntity = entity as PlayerEntity;
           if (!playerEntity.world) return;
@@ -239,7 +226,6 @@ startServer(world => {
 
             if (player.input['sp']) {
               if (state.swimming.isSwimming) {
-                console.log("stop swimming");
                 playerEntity.stopModelAnimations([ 'crawling' ]);
                 playerEntity.startModelLoopedAnimations([ 'idle' ]);
               }
@@ -318,6 +304,7 @@ startServer(world => {
         type: 'inventoryUpdate',
         inventory: inventoryManager.getInventory(player)
       });
+
 };
 
 /**
@@ -348,7 +335,7 @@ world.chatManager.onBroadcastMessage = (player, message) => {
  * set the mood!
  */
 new Audio({
-  uri: 'audio/music/overworld.mp3',
+  uri: "audio/music/hytopia-main.mp3",
   loop: true,
   volume: 0.1,
 }).play(world);

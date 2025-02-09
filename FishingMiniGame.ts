@@ -66,10 +66,13 @@ export class FishingMiniGame {
 
     onCastStart(player: Player) {
         const state = this.stateManager.getState(player);
-        if (!state) return;
-        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+        if (!state) return; 
+        console.log("state swimming", state.swimming.isSwimming);
+        
+
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];    
+        if (this.stateManager.isInOrOnWater(playerEntity)) { return }
     
-        console.log("onCastStart");
         if (!state.fishing.isCasting) {  // Start the power loop
             state.fishing.isCasting = true;
             state.fishing.castPower = 0;
@@ -103,8 +106,6 @@ export class FishingMiniGame {
         playerEntity.stopModelAnimations(['cast_back_upper']);
         playerEntity.startModelOneshotAnimations([ 'cast_foward_lower' ]);
         playerEntity.startModelOneshotAnimations([ 'cast_foward_upper' ]);
-
-        console.log("Players Location:", playerEntity.position);
 
         // Get forward direction and negate it to reverse direction
         const rotation = playerEntity.rotation;
@@ -316,7 +317,7 @@ export class FishingMiniGame {
             console.log("no jig", state.fishing.isPlayerFishing);
             state.fishing.isPlayerFishing = false;
             console.log("no jig", state.fishing.isPlayerFishing);
-            this.messageManager.sendGameMessage("Fish aren't bitin'!", player);
+            this.messageManager.sendGameMessage("Fish aren't biting here.", player);
         }
     }
 
@@ -328,7 +329,7 @@ class ReelingGame {
     private fishPosition = 0.5;
     private barPosition = 0.5;
     private fishVelocity = 0.005;  // Original fish movement speed
-    private readonly BAR_SPEED = 0.015;  // Original bar speed
+    private  BAR_SPEED = 0.015;  // Original bar speed
     private readonly BAR_WIDTH = 0.25;
     private progress = 25;
     private levelingSystem: LevelingSystem;
@@ -355,30 +356,44 @@ class ReelingGame {
     startReeling(player: Player, fish: CaughtFish) {
         const state = this.stateManager.getState(player);
         if (!state) return;
-        console.log("Reeling Start State:", state);
-
+        let rodCheck = this.stateManager.getEquippedRod(player);
+        if (!rodCheck) return;
+   
         // Calculate velocity based on fish value
         var fishVelocity = this.BASE_FISH_SPEED + (fish.value * this.VALUE_SPEED_MULTIPLIER);
+        if (rodCheck.id === 'fire_rod') {
+           this.BAR_SPEED *= 0.95;
+        } else if (rodCheck.id === 'ice_rod') {
+            fishVelocity *= 0.95;
+        }
 
         // Reduce velocity for higher value fish
-        if (fish.value > 1000) {
-            fishVelocity *= 0.3;  // Only 30% of calculated speed
+        if (fish.value > 5000) {
+            fishVelocity *= 0.45;  // Only 40% of calculated speed
+        }else if (fish.value > 3000) {
+            fishVelocity *= 0.48;  // Only 40% of calculated speed
+        }else if (fish.value > 2000) {
+            fishVelocity *= 0.50;  // Only 40% of calculated speed
+        }else if (fish.value > 1500) {
+            fishVelocity *= 0.55;  // Only 40% of calculated speed
+        } else if (fish.value > 1000) {
+            fishVelocity *= 0.58;  // Only 40% of calculated speed
         } else if (fish.value > 800) {
-            fishVelocity *= 0.4;
+            fishVelocity *= 0.60;
         } else if (fish.value > 600) {
-            fishVelocity *= 0.5;
+            fishVelocity *= 0.70;
         } else if (fish.value > 400) {
-            fishVelocity *= 0.6;
+            fishVelocity *= 0.80;
         } else if (fish.value > 200) {
-            fishVelocity *= 0.7;
+            fishVelocity *= 0.90;
         }
 
          // Small additional reductions based on player level
         const playerLevel = this.levelingSystem.getCurrentLevel(player);
         if (playerLevel >= 20) {
-            fishVelocity *= 0.85;  // 15% reduction
+            fishVelocity *= 0.87;  // 15% reduction
         } else if (playerLevel >= 15) {
-            fishVelocity *= 0.88;  // 12% reduction
+            fishVelocity *= 0.89;  // 12% reduction
         } else if (playerLevel >= 10) {
             fishVelocity *= 0.91;  // 9% reduction
         } else if (playerLevel >= 5) {
@@ -394,9 +409,6 @@ class ReelingGame {
             progress: 25,   
             currentCatch: fish     // Starting progress
         };
-
-        console.log(`Starting reeling game with fish speed: ${this.fishVelocity}`);
-        console.log("Reeling Start State:", state);
         
         player.ui.sendData({
             type: 'startReeling'

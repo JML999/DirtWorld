@@ -111,7 +111,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 20
             },
             waterZoneChances: {
-                shore: 75,
+                shore: 70,
                 open: 25
             },
             minWeight: 1,
@@ -141,7 +141,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 10
             },
             waterZoneChances: {
-                shore: 90,
+                shore: 70,
                 open: 10
             },
             minWeight: 1,
@@ -171,12 +171,12 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 90
             },
             waterZoneChances: {
-                shore: 90,
+                shore: 60,
                 open: 10
             },
             minWeight: 3,
             maxWeight: 12,
-            baseValue: 80,
+            baseValue: 55,
             modelData: {
                 modelUri: 'models/npcs/goldfin_mackerel.gltf',
                 baseScale: 0.75,
@@ -213,6 +213,33 @@ export const PIER_FISH_CATALOG: FishingArea = {
             }
         },
         {
+            id: 'hammerhead_shark',
+            name: 'hammerhead Shark',
+            rarity: 'epic',
+            spawnChances: {
+                shallow: 5,
+                mid: 40,
+                deep: 65     // Much more common in deep
+            },
+            waterBlockChances: {
+                flowing: 0,
+                still: 5,
+                open: 95
+            },
+            waterZoneChances: {
+                shore: 30,
+                open: 60
+            },
+            minWeight: 75,
+            maxWeight: 1000,
+            baseValue: 120,
+            modelData: {
+                modelUri: 'models/npcs/hammerhead_shark.gltf',
+                baseScale: 0.8,
+                maxScale: 3.0
+            }
+        },  
+        {
             id: 'grouper',
             name: 'Grouper',
             rarity: 'rare',
@@ -235,7 +262,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 80
             },
             minWeight: 10,
-            maxWeight: 300,
+            maxWeight: 800,
             baseValue: 50,
             modelData: {
                 modelUri: 'models/npcs/grouper.gltf',
@@ -265,12 +292,12 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 50
             },
             minWeight: 2,
-            maxWeight: 8,
+            maxWeight: 10,
             baseValue: 25,
             modelData: {
                 modelUri: 'models/npcs/puffer_fish.gltf',
-                baseScale: 1.0,
-                maxScale: 1.5
+                baseScale: 0.8,
+                maxScale: 1.2
             }
         },
         {
@@ -292,7 +319,7 @@ export const PIER_FISH_CATALOG: FishingArea = {
                 open: 70
             },
             minWeight: 3,
-            maxWeight: 100,
+            maxWeight: 1000,
             baseValue: 30,
             modelData: {
                 modelUri: 'models/npcs/squid.gltf',
@@ -323,8 +350,8 @@ export const PIER_FISH_CATALOG: FishingArea = {
             baseValue: 100,
             modelData: {
                 modelUri: 'models/npcs/swordfish.gltf',
-                baseScale: 1.0,
-                maxScale: 3.0
+                baseScale: 0.8,
+                maxScale: 2.5
             }
         },
         {
@@ -350,36 +377,10 @@ export const PIER_FISH_CATALOG: FishingArea = {
             baseValue: 150,
             modelData: {
                 modelUri: 'models/npcs/tropical_swordfish.gltf',
-                baseScale: 1.0,
-                maxScale: 3.0
+                baseScale: 0.8,
+                maxScale: 2.8
             }
-        }, {
-            id: 'hammerhead_shark',
-            name: 'hammerhead Shark',
-            rarity: 'epic',
-            spawnChances: {
-                shallow: 5,
-                mid: 40,
-                deep: 65     // Much more common in deep
-            },
-            waterBlockChances: {
-                flowing: 0,
-                still: 5,
-                open: 95
-            },
-            waterZoneChances: {
-                shore: 40,
-                open: 60
-            },
-            minWeight: 500,
-            maxWeight: 1000,
-            baseValue: 120,
-            modelData: {
-                modelUri: 'models/npcs/hammerhead_shark.gltf',
-                baseScale: 1.0,
-                maxScale: 3.0
-            }
-        },     
+        },    
         {
             id: 'gold_swordfish',
             name: 'Gold Swordfish',
@@ -430,8 +431,8 @@ export const PIER_FISH_CATALOG: FishingArea = {
             baseValue: 500,
             modelData: {
                 modelUri: 'models/npcs/great_white_shark.gltf',
-                baseScale: 1.0,
-                maxScale: 3.0
+                baseScale: 1.2,
+                maxScale: 3.2
             }
         }
     ]

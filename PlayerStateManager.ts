@@ -17,9 +17,11 @@ export class PlayerStateManager {
             isInteracting: boolean;
             selectedOption: number | null;
             currentMerchant: string | null;
+            merchantResponse: string;
         };
         swimming: {
             isSwimming: boolean;
+            breath: number;
         };
     }> = new Map();
 
@@ -55,10 +57,12 @@ export class PlayerStateManager {
             merchant: {
                 isInteracting: false,
                 currentMerchant: null,
-                selectedOption: null
+                selectedOption: null,
+                merchantResponse: ""
             },
             swimming: {
-                isSwimming: false
+                isSwimming: false,
+                breath: 100.00
             }
         });
     }
@@ -213,6 +217,33 @@ export class PlayerStateManager {
         const blockKey = `${Math.floor(position.x)},${Math.floor(position.y)},${Math.floor(position.z)}`;
         const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
         return blockTypeId === 43 || blockTypeId === 42 || blockTypeId === 100;
+    }
+
+    isWaterBelow(entity: any): boolean {
+        const startPos = {
+            x: Math.floor(entity.position.x),
+            y: Math.floor(entity.position.y),
+            z: Math.floor(entity.position.z)
+        };
+
+        // Loop downward until we hit first block
+        for (let y = startPos.y; y > 0; y--) {
+            const blockKey = `${startPos.x},${y},${startPos.z}`;
+            const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
+            
+            // Skip if air block (undefined)
+            if (!blockTypeId) continue;
+
+            // Return true if first block found is water
+            return blockTypeId === 43 || blockTypeId === 42 || blockTypeId === 100;
+        }
+
+        return false;
+    }
+
+    // Then combine both checks
+    isInOrOnWater(entity: any): boolean {
+        return this.isInWater(entity) || this.isWaterBelow(entity);
     }
 
 }

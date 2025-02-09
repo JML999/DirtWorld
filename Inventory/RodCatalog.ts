@@ -27,8 +27,8 @@ export const FISHING_RODS: InventoryItem[] = [
         modelId: 'oak-rod',
         name: 'Oak Rod',
         type: 'rod',
-        rarity: 'uncommon',
-        value: 50,
+        rarity: 'common',
+        value: 175,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -36,7 +36,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 catchRate: 1.2,
                 rarityBonus: 0.1,
                 sizeBonus: 0.1,
-                maxDistance: 12,
+                maxDistance: 8,
                 luck: 1.2,
                 maxCatchWeight: 25,
                 custom: true
@@ -49,7 +49,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Bamboo Rod',
         type: 'rod',
         rarity: 'uncommon',
-        value: 100,
+        value: 500,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -59,7 +59,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 sizeBonus: 0,
                 maxDistance: 10,
                 luck: 1,
-                maxCatchWeight: 20,
+                maxCatchWeight: 100,
                 custom: false
             }
         }
@@ -71,7 +71,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Carbon Fiber Rod',
         type: 'rod',
         rarity: 'rare',
-        value: 2000,
+        value: 1000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -81,7 +81,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 sizeBonus: 0.2,
                 maxDistance: 15,
                 luck: 1.5,
-                maxCatchWeight: 350,
+                maxCatchWeight: 550,
                 custom: true
             }
         }
@@ -92,7 +92,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Deep Sea Rod',
         type: 'rod',
         rarity: 'rare',
-        value: 2500,
+        value: 2000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -113,7 +113,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Onyx Rod',
         type: 'rod',
         rarity: 'epic',
-        value: 1000,
+        value: 3000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -123,7 +123,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 sizeBonus: 0.4,
                 maxDistance: 35,
                 luck: 5.0,
-                maxCatchWeight: 5000,
+                maxCatchWeight: 750,
                 custom: true
             }
         }
@@ -134,7 +134,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Fire Rod',
         type: 'rod',
         rarity: 'epic',
-        value: 5000,
+        value: 3000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -142,7 +142,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 catchRate: 3.0,
                 rarityBonus: 0.7,
                 sizeBonus: 0.5,
-                maxDistance: 50,
+                maxDistance: 35,
                 specialAbility: "Fire",
                 luck: 2.5,
                 maxCatchWeight: 650,
@@ -156,7 +156,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Ice Rod',
         type: 'rod',
         rarity: 'epic',
-        value:  5000,
+        value:  3000,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -164,31 +164,10 @@ export const FISHING_RODS: InventoryItem[] = [
                 catchRate: 2.5,
                 rarityBonus: 0.7,
                 sizeBonus: 0.6,
-                maxDistance: 45,
+                maxDistance: 35,
                 specialAbility: "Ice",
                 luck: 3.0,
                 maxCatchWeight: 650,
-                custom: true
-            }
-        }
-    },
-    {
-        id: 'royal_rod',
-        modelId: 'royal-rod',
-        name: 'Royal Rod',
-        type: 'rod',
-        rarity: 'legendary',
-        value:  100000,
-        quantity: 1,
-        metadata: {
-            rodStats: {
-                catchSpeed: 3.0,
-                catchRate: 3.0,
-                rarityBonus: 0.8,
-                sizeBonus: 0.8,
-                maxDistance: 75,
-                luck: 4.0,
-                maxCatchWeight: 900,
                 custom: true
             }
         }
@@ -199,7 +178,7 @@ export const FISHING_RODS: InventoryItem[] = [
         name: 'Hytopian Rod',
         type: 'rod',
         rarity: 'legendary',
-        value:  250000,
+        value:  7500,
         quantity: 1,
         metadata: {
             rodStats: {
@@ -207,7 +186,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 catchRate: 4.0,
                 rarityBonus: 1.0,
                 sizeBonus: 1.0,
-                maxDistance: 100,
+                maxDistance: 45,
                 luck: 5.0,
                 maxCatchWeight: 99999999999,
                 custom: true

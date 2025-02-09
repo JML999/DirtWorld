@@ -6,7 +6,6 @@ import type { InventoryManager } from './Inventory/InventoryManager';
 import type { World } from 'hytopia';
 import mapData from './assets/maps/map_test.json';
 import { getWaterZoneType, WaterZoneType } from './fishCatalog';
-
 export interface CaughtFish {
     id: string;        // Unique catch ID (e.g., "mackerel_1234567890")
     name: string;      // Fish name (e.g., "Mackerel")
@@ -49,40 +48,90 @@ export class FishSelector {
         // If in open water, 40% chance for rare+ fish logic
         if (waterZone === WaterZoneType.OPEN) {
             const zoneRoll = Math.random() * 100;
-            
             if (zoneRoll > 60) {  // 40% chance for rare fish logic
-                console.log("Player is in open water - forcing rare+ fish");
-                
                 const rareFish = PIER_FISH_CATALOG.fish.filter(fish => 
                     fish.rarity === 'rare' || 
                     fish.rarity === 'epic' || 
                     fish.rarity === 'legendary'
                 );
-
                 const roll = Math.random() * 100;
-                
-                if (roll < 33) {
-                    const rareFishOnly = rareFish.filter(fish => fish.rarity === 'rare');
-                    return rareFishOnly[Math.floor(Math.random() * rareFishOnly.length)];
-                } else if (roll < 66) {
-                    const epicFishOnly = rareFish.filter(fish => fish.rarity === 'epic');
-                    return epicFishOnly[Math.floor(Math.random() * epicFishOnly.length)];
+                if (this.isBaitHooked(player).isHooked) {
+                    let smallBait = [7, 40, 70]
+                    let largeBait = [5, 38, 65]
+                    var chosenBait = smallBait
+
+                    if (this.isBaitHooked(player).weight! > 3) {
+                        chosenBait = largeBait
+                    }
+                    if (roll < chosenBait[0]) {
+                        return null; // No catch
+                    } else if (roll < chosenBait[1]) {
+                        const rareFishOnly = rareFish.filter(fish => fish.rarity === 'rare');
+                        return rareFishOnly[Math.floor(Math.random() * rareFishOnly.length)];
+                    } else if (roll < chosenBait[2]) {
+                        const epicFishOnly = rareFish.filter(fish => fish.rarity === 'epic');
+                        return epicFishOnly[Math.floor(Math.random() * epicFishOnly.length)];
+                    } else {
+                        const legendaryFishOnly = rareFish.filter(fish => fish.rarity === 'legendary');
+                        return legendaryFishOnly[Math.floor(Math.random() * legendaryFishOnly.length)];
+                    }
                 } else {
-                    const legendaryFishOnly = rareFish.filter(fish => fish.rarity === 'legendary');
-                    return legendaryFishOnly[Math.floor(Math.random() * legendaryFishOnly.length)];
+                    if (roll < 10) {
+                        return null; // No catch
+                    } else if (roll < 50) {
+                        const rareFishOnly = rareFish.filter(fish => fish.rarity === 'rare');
+                        return rareFishOnly[Math.floor(Math.random() * rareFishOnly.length)];
+                    } else if (roll < 80) {
+                        const epicFishOnly = rareFish.filter(fish => fish.rarity === 'epic');
+                        return epicFishOnly[Math.floor(Math.random() * epicFishOnly.length)];
+                    } else {
+                        const legendaryFishOnly = rareFish.filter(fish => fish.rarity === 'legendary');
+                        return legendaryFishOnly[Math.floor(Math.random() * legendaryFishOnly.length)];
+                    }
                 }
             }
         }
-
         // 60% chance in open water or always in shore water
         return this.selectShoreWaterFish(player, position);
     }
 
     // Move existing shore water logic to separate method
     private selectShoreWaterFish(player: Player, position: { x: number, y: number, z: number }): FishData | null {
-        const roll = Math.random() * 100;
+        var roll = Math.random() * 100;
+        let rod = this.inventoryManager.getEquippedRod(player);
+        if (rod?.id === "beginner-rod" || rod?.id === "oak_rod") {
+            return this.getBeginnerWaterFish(player, position);
+        } else if (rod?.id === "bamboo_rod_basic" || rod?.id === "carbon_fiber_rod") {
+            return this.getMediumWaterFish(player, position);
+        } else {
+            if (this.isBaitHooked(player).isHooked) {
+                roll = roll * 0.90;
+            }
+            let cumulativeChance = 0;
+            for (const fish of PIER_FISH_CATALOG.fish) {
+                let baseChance = fish.waterZoneChances.shore;
+                cumulativeChance += baseChance;
+                
+                if (roll <= cumulativeChance) {
+                    return fish;
+                }
+            }
+            return null;
+        }
+    }
+
+    private getBeginnerWaterFish(player: Player, position: { x: number, y: number, z: number }): FishData | null {
+        var roll = Math.random() * 100;
+        let rod = this.inventoryManager.getEquippedRod(player);
+        if (rod?.id === "beginner-rod") { 
+            roll = roll * 8;
+        } else if (rod?.id === "oak_rod") {
+            roll = roll * 3;
+        } 
+        if (this.isBaitHooked(player).isHooked) {
+            roll = roll * 0.90;
+        }
         let cumulativeChance = 0;
-        
         for (const fish of PIER_FISH_CATALOG.fish) {
             let baseChance = fish.waterZoneChances.shore;
             cumulativeChance += baseChance;
@@ -92,6 +141,33 @@ export class FishSelector {
             }
         }
         return null;
+    }
+
+    private getMediumWaterFish(player: Player, position: { x: number, y: number, z: number }): FishData | null {
+        const MAX_ATTEMPTS = 5;
+        
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            // Get a random fish index from the catalog
+            const randomIndex = Math.floor(Math.random() * PIER_FISH_CATALOG.fish.length);
+            
+            // Do the probability roll for this fish
+            const roll = Math.random() * 100;
+            let cumulativeChance = 0;
+            
+            // Start checking from our random index
+            for (let i = 0; i < PIER_FISH_CATALOG.fish.length; i++) {
+                const currentIndex = (randomIndex + i) % PIER_FISH_CATALOG.fish.length;
+                const fish = PIER_FISH_CATALOG.fish[currentIndex];
+                
+                let baseChance = fish.waterZoneChances.shore;
+                cumulativeChance += baseChance;
+                
+                if (roll <= cumulativeChance) {
+                    return fish;
+                }
+            }
+        }
+        return null; // No fish caught after all attempts
     }
 
     private getHotspotBonus(fish: FishData, position: { x: number, y: number, z: number }): number {

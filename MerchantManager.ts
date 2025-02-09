@@ -67,7 +67,6 @@ export class MerchantManager {
     }
 
     initialize() {
-
         // Spawn all merchants
         MerchantManager.MERCHANT_CONFIGS.forEach(config => {
             this.spawnMerchant(config);
@@ -108,6 +107,7 @@ export class MerchantManager {
                 this.removeDialog(other.player);
                 if (state) {
                     state.merchant.currentMerchant = null;
+                    state.merchant.merchantResponse = "";
                 }
                 other.player.ui.sendData({
                     type: 'hideRodShop'
@@ -153,12 +153,37 @@ export class MerchantManager {
                 this.handleFishMerchantOption(player, option);
                 break;
             case 'rod_merchant':
-                this.handleRodMerchantOption(player, option);
+                const randomRodResponse = this.getMerchantResponse(player, "rod");
+                this.handleRodMerchantOption(player, option, randomRodResponse);
                 break;
             case 'boat_merchant':
-                this.handleBoatMerchantOption(player, option);
+                const randomBoatResponse = this.getMerchantResponse(player, "boat");
+                this.handleBoatMerchantOption(player, option, randomBoatResponse);
                 break;
         }
+    }
+
+    public getMerchantResponse(player: Player, merchantType: string): string {
+        const state = this.stateManager.getState(player);
+        if (!state) return "Let me think about it...";
+        if (state.merchant.merchantResponse == "") {
+            if (merchantType == "rod") {
+                const randomResponse = FISHING_KNOWLEDGE.rods.general[
+                    Math.floor(Math.random() * FISHING_KNOWLEDGE.rods.general.length)
+                ];
+                state.merchant.merchantResponse = randomResponse;
+                return randomResponse;
+            } else if (merchantType == "boat") {
+                const randomResponse = FISHING_KNOWLEDGE.fishing_tips[
+                    Math.floor(Math.random() * FISHING_KNOWLEDGE.fishing_tips.length)
+                ];
+                state.merchant.merchantResponse = randomResponse;
+                return randomResponse;
+            }
+        } else {
+            return state.merchant.merchantResponse;
+        }
+        return "Let me think about it...";
     }
 
     private handleFishMerchantOption(player: Player, option: number) {
@@ -179,7 +204,7 @@ export class MerchantManager {
         }
     }
 
-    private handleRodMerchantOption(player: Player, option: number) {
+    private handleRodMerchantOption(player: Player, option: number, randomResponse: string) {
         switch(option) {
             case 0: // Buy gear
                 this.showRodShop(player);
@@ -191,9 +216,6 @@ export class MerchantManager {
                     });     
                      break;
             case 2: // Sell gear
-                const randomResponse = FISHING_KNOWLEDGE.rods.general[
-                    Math.floor(Math.random() * FISHING_KNOWLEDGE.rods.general.length)
-                ];
                 player.ui.sendData({
                     type: 'merchantSpeak',
                     message: randomResponse
@@ -203,7 +225,7 @@ export class MerchantManager {
         }
     }
 
-    private handleBoatMerchantOption(player: Player, option: number) {
+    private handleBoatMerchantOption(player: Player, option: number, randomBoatResponse: string) {
         switch(option) {
             case 0: // Who are you?
                 player.ui.sendData({
@@ -212,13 +234,9 @@ export class MerchantManager {
                 });
                 break;
             case 1: // Got any fishing tips
-            const randomResponse = FISHING_KNOWLEDGE.fishing_tips[
-                Math.floor(Math.random() * FISHING_KNOWLEDGE.fishing_tips.length)
-            ];
-        
             player.ui.sendData({
                 type: 'merchantSpeak',
-                message: randomResponse
+                message: randomBoatResponse
             });  
                 break;
         }
@@ -306,14 +324,15 @@ export class MerchantManager {
             if (inventory?.items.some(item => item.id === rod.id)) return false;
             switch(rod.rarity) {
                 case 'common':
+                    return level >= 1; // 1
                 case 'uncommon':
                     return level >= 5; // 5
                 case 'rare':
-                    return level >= 10; // 10
+                    return level >= 8; // 10
                 case 'epic':
-                    return level >= 20; // 20 
+                    return level >= 15; // 20 
                 case 'legendary':
-                    return level >= 30; // 30
+                    return level >= 20; // 30
                 default:
                     return false;
             }
@@ -357,6 +376,11 @@ export class MerchantManager {
             // Clean up just this player's dialog
             this.removeDialog(player);
             this.activeDialogs.delete(player);
+            const state = this.stateManager.getState(player);
+            if (state) {
+                state.merchant.currentMerchant = null;
+                state.merchant.merchantResponse = "";
+            }
         } else {
             // Clean up all dialogs
             this.activeDialogs.forEach((dialog, player) => {
