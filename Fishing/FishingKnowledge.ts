@@ -31,7 +31,7 @@ export const FISHING_KNOWLEDGE = {
         "Gold Swordfish? 20+ block cast range or forget it.",
         "If you are looking for bait fish, the beach is the best place to find them.",
         "Bait increases your catch rate. The more bait you have, the better your catch rate.",
-        "Bait size matters. The bigger the bait, the better the catch rate.",
+        "No sense wasting big catch bait on small fish.",
         "The old dock posts are a great place to find grouper when they come to shore.",
     ]
 };

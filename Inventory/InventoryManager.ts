@@ -24,12 +24,10 @@ export class InventoryManager {
 
     isFishEquipped(player: Player, fishItem: InventoryItem): boolean {
         const hasEquippedEntity = this.equippedFishEntities.has(player.id);
-        
         const inventory = this.getInventory(player);
         const isMarkedEquipped = inventory?.items.some(item => 
             item.id === fishItem.id && item.equipped
         ) ?? false;  // Add null coalescing operator
-
         return hasEquippedEntity && isMarkedEquipped;
     }
 
@@ -43,7 +41,7 @@ export class InventoryManager {
 
         // Check for existing item stack
         const existingItem = inventory.items.find(i => i.id === item.id);
-        if (existingItem) {
+        if (existingItem ) {
             existingItem.quantity += item.quantity;
         } else {
             inventory.items.push(item);
@@ -61,13 +59,22 @@ export class InventoryManager {
         if (itemIndex === -1) return false;
 
         const item = inventory.items[itemIndex];
+        const isBait = item.type === 'bait';
         if (item.quantity <= quantity) {
+                           // Special bait UI reset if we removed bait
+                           if (isBait) {
+                            player.ui.sendData({
+                                type: "resetBaitHighlights",
+                                equipped: item.id
+                            });
+                        }
             inventory.items.splice(itemIndex, 1);
         } else {
             item.quantity -= quantity;
         }
 
         this.updateInventoryUI(player);
+
         return true;
     }
 
@@ -93,13 +100,22 @@ export class InventoryManager {
         const inventory = this.inventories.get(player.id);
         if (!inventory) return false;
 
-        let oldItem = inventory.items.find(i => i.equipped);
-        if (oldItem) {
-            this.unequipItem(player, oldItem.type);
-        }
-
         const item = inventory.items.find(i => i.id === itemId);
         if (!item) return false;
+
+        // If clicking an already equipped fish, unequip it
+        if (item.type === 'fish' && item.equipped) {
+            this.unequipItem(player, item.type);
+            inventory.equippedFish = undefined;
+            const entity = this.equippedFishEntities.get(player.id);
+            if (entity) {
+                entity.despawn();
+                this.equippedFishEntities.delete(player.id);
+            }
+            item.equipped = false;
+            this.updateInventoryUI(player);
+            return true;
+        }
 
         // Handle rod equipment
         if (item.type === 'rod') {
@@ -107,12 +123,15 @@ export class InventoryManager {
         } else if (item.type === 'fish') {
             let e = this.displayFish(player, item);
             this.equippedFishEntities.set(player.id, e);
+        } else if (item.type === 'bait') {
+            this.equipBait(player, item);
         }
 
         // Unequip any currently equipped items of the same type
         inventory.items.forEach(i => {
             if (i.type === item.type) {
                 i.equipped = false;
+                this.unequipItem(player, i.type);
             }
         });
 
@@ -124,10 +143,16 @@ export class InventoryManager {
             inventory.equippedRod = itemId;
         } else if (item.type === 'bait') {
             inventory.equippedBait = itemId;
-        }
-
+            this.hookBait(player, itemId);
+        } else if (item.type === 'fish') {
+            inventory.equippedFish = itemId;
+        }   
         this.updateInventoryUI(player);
         return true;
+    }
+
+    equipBait(player: Player, item: InventoryItem){
+        this.hookBait(player, item.id);
     }
 
     equipRod(player: Player, item: InventoryItem){
@@ -163,8 +188,6 @@ export class InventoryManager {
         );
 
         this.equippedRodEntities.set(player.id, newRodEntity);
-        console.log(newRodEntity.name);
-        console.log("equipped");
     }
 
     getEquippedFish(player: Player): InventoryItem | null {
@@ -193,19 +216,18 @@ export class InventoryManager {
         return true;
     }
 
-    checkBait(player: Player, itemId: string): boolean {
+    checkBait(player: Player): {hasBait: boolean, item: InventoryItem | null} {
         const inventory = this.inventories.get(player.id);
-        if (!inventory) return false;
+        if (!inventory) return {hasBait: false, item: null};
         for (const item of inventory.items) {
-            if (item.metadata.fishStats?.baited) {
-                return true;
+            if (item.type === 'bait' && item.equipped) {
+                return {hasBait: true, item: item};
             }
         }
-        return false;
+        return {hasBait: false, item: null};
     }
 
     displayFish(player: Player, item: InventoryItem): Entity {
-        
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
         // Create display entity
         const displayEntity = new Entity({
@@ -234,13 +256,11 @@ export class InventoryManager {
     }
 
 
-
     unequipItem(player: Player, type: string): boolean {
         const inventory = this.inventories.get(player.id);
         if (!inventory) return false;
 
         const equippedItem = inventory.items.find(item => item.type === type && item.equipped);
-        console.log("equippedItem", equippedItem);
         if (equippedItem) {
             equippedItem.equipped = false;
             
@@ -269,7 +289,7 @@ export class InventoryManager {
         return this.inventories.get(player.id);
     }
 
-    private updateInventoryUI(player: Player) {
+    updateInventoryUI(player: Player) {
         const inventory = this.inventories.get(player.id);
         if (!inventory) return;
 

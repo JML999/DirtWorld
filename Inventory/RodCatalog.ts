@@ -79,7 +79,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 catchRate: 1.5,
                 rarityBonus: 0.2,
                 sizeBonus: 0.2,
-                maxDistance: 15,
+                maxDistance: 10,
                 luck: 1.5,
                 maxCatchWeight: 550,
                 custom: true
@@ -102,7 +102,7 @@ export const FISHING_RODS: InventoryItem[] = [
                 sizeBonus: 0.3,
                 maxDistance: 25,
                 luck: 1.7,
-                maxCatchWeight: 500,
+                maxCatchWeight: 350,
                 custom: true
             }
         }

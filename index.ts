@@ -44,44 +44,19 @@ import {
 
 import { PlayerStateManager } from './PlayerStateManager';
 import worldMap from './assets/maps/map_test.json';
-import { PathfindingBehavior } from './agents/Behaviors/PathfindingBehavior';
-import { BaseAgent } from './agents/BaseAgent';
-import { SpeakBehavior } from './agents/Behaviors/SpeakBehavior';
-import OpenAI from 'openai';
+
 import 'dotenv/config';
-import { ThumpAgent } from './ThumpAgent';
-import type { AgentBehavior } from './agents/BaseAgent';
-import type { IncomingMessage, ServerResponse } from 'http';
 import { InventoryManager } from './Inventory/InventoryManager';
-import type { InventoryItem } from './Inventory/Inventory';
 import { LevelingSystem } from './LevelingSystem';
-import { FishingMiniGame } from './FishingMiniGame';
+import { FishingMiniGame } from './Fishing/FishingMiniGame';
 import { MerchantManager } from './MerchantManager';
 import { CurrencyManager } from './CurrencyManager';
-import { FISHING_RODS } from './Inventory/RodCatalog';
 import { MessageManager } from './MessageManager';
+import { MyPlayerController } from './MyPlayerController';
+import { FishSpawnManager } from './Fishing/FishSpawnManager';
+import { BaitBlockManager } from './Bait/BaitBlockManager';
+import { GamePlayerEntity } from './GamePlayerEntity';
 
-// Initialize OpenAI with explicit error handling
-
-let openai: OpenAI;
-/*
-try {
-  openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-  });
-  console.log('OpenAI initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize OpenAI:', error);
-  process.exit(1);
-}
-*/
-
-// Store agents globally
-const agents: BaseAgent[] = [];
-const CHAT_RANGE = 10; // Distance in blocks for proximity chat
-let wasPressed = false; 
-let isCasting = false;  // Add at file level with other globals
-let lastInputState: PlayerInput = { ml: false };  // At top with globals
 
 /**
  * startServer is always the entry point for our game.
@@ -102,8 +77,9 @@ startServer(world => {
     const messageManager = new MessageManager();
     const stateManager = new PlayerStateManager(inventoryManager, levelingSystem, currencyManager, messageManager);
     const merchantManager = new MerchantManager(world, stateManager);
-    const fishingMiniGame = new FishingMiniGame(world, inventoryManager, levelingSystem, stateManager, messageManager);
-   
+    const fishSpawnManager = new FishSpawnManager(stateManager, world);
+    const fishingMiniGame = new FishingMiniGame(world, inventoryManager, levelingSystem, stateManager, messageManager, fishSpawnManager);
+    const baitBlockManager = new BaitBlockManager(world, stateManager);
 
     merchantManager.initialize();
 
@@ -125,186 +101,25 @@ startServer(world => {
      * internally uses our player entity controller.
      */
     world.onPlayerJoin = (player) => {
-      currencyManager.initializePlayer(player);
-      stateManager.initializePlayer(player);
       // Clean up any orphaned merchant UIs before setting up new ones
       merchantManager.cleanupExistingMerchantUIs();
 
-
-        const playerEntity = new PlayerEntity({
-            player,
-            name: "Player",
-            modelUri: "models/players/player.gltf",
-            modelScale: 0.5,
-            modelLoopedAnimations: ["idle"]
-        });
-
-        playerEntity.controller!.onTick = (entity: Entity, deltaTimeMs: number) => {
-          const playerEntity = entity as PlayerEntity;
-          if (!playerEntity.world) return;
-          const state = stateManager.getState(player);
-          if (!state) return;
-
-                      // Death check - if player falls below y=0
-          if (playerEntity.position.y < 0.9) {
-            playerEntity.stopModelAnimations(['crawling']);
-            playerEntity.startModelLoopedAnimations([ 'idle' ]);
-            // Respawn at spawn point
-            playerEntity.setPosition({ x: 0, y: 10, z: 0 });
-            // Reset physics
-            playerEntity.rawRigidBody?.setLinearVelocity({ x: 0, y: 0, z: 0 });
-            playerEntity.rawRigidBody?.setGravityScale(1.0);
-            playerEntity.rawRigidBody?.setLinearDamping(0.0);
-            return; // Skip water check if dead
-          }
-          
-          if (stateManager.isInWater(playerEntity)) {
-              state.swimming.isSwimming = true;
-              playerEntity.startModelOneshotAnimations([ 'crawling' ]);
-              playerEntity.rawRigidBody?.setGravityScale(-1.5);
-              playerEntity.rawRigidBody?.setLinearDamping(5.0);
-          } else {
-              state.swimming.isSwimming = false;
-              playerEntity.startModelLoopedAnimations([ 'idle' ]);
-              playerEntity.rawRigidBody?.setGravityScale(1.0);
-              playerEntity.rawRigidBody?.setLinearDamping(0.0);
-          }
-      };
-
-
-      function onTickWithPlayerInput(this: PlayerEntityController, entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number) {
-            if (!entity.world) return;
-            const state = stateManager.getState(player);
-            if (!state) return;
-
-            //fishingMiniGame.handleInput(player, input);
-            
-            // Add at start of onTickWithPlayerInput
-            const hasRodEquipped = inventoryManager.getEquippedRod(entity.player);
-
-            if (input.ml) {
-              console.log("ml");
-              entity.stopModelAnimations(['simple_interact']);
-            }
-            
-            if (hasRodEquipped) {
-                // Toggle casting state on mouse click
-                if (input.ml && !lastInputState.ml && !state.fishing.isPlayerFishing && !state.fishing.reelingGame.isReeling) {
-                  console.log("casting");
-                  input.ml = false;
-                    fishingMiniGame.onCastStart(entity.player);
-                } 
-                
-                if (state.fishing.isCasting || state.fishing.isReeling || state.fishing.isPlayerFishing) {
-                    input.w = false;
-                    input.a = false;
-                    input.s = false;
-                    input.d = false;
-                }
-                
-                // Update while casting
-                fishingMiniGame.onTick(entity.player);
-            }
-
-            // Handle merchant dialog inputs
-            if (state.merchant?.isInteracting && state.merchant.currentMerchant) {
-                if (player.input['1']) merchantManager.handleMerchantOption(entity.player, state.merchant.currentMerchant, 0);
-                if (player.input['2']) {
-                  console.log("b");
-                  merchantManager.handleMerchantOption(entity.player, state.merchant.currentMerchant, 1)
-                }
-                if (player.input['3']) {
-                  console.log("c");
-                  merchantManager.handleMerchantOption(entity.player, state.merchant.currentMerchant, 2);
-                }
-                if (player.input['4']) {
-                  console.log("d");
-                  merchantManager.handleMerchantOption(entity.player, state.merchant.currentMerchant, 3);
-                }
-                if (player.input['5']) merchantManager.handleMerchantOption(entity.player, state.merchant.currentMerchant, 4);
-            }
-
-            if (player.input['sp']) {
-              if (state.swimming.isSwimming) {
-                playerEntity.stopModelAnimations([ 'crawling' ]);
-                playerEntity.startModelLoopedAnimations([ 'idle' ]);
-              }
-            }
-            // Store last input state in player's state instead of globally
-            state.fishing.lastInputState = { ml: input.ml };
-        }
-
-        playerEntity.controller!.onTickWithPlayerInput = onTickWithPlayerInput;
-        playerEntity.spawn(world, { x: -2, y: 10, z: 27 });
-
-          // Initialize inventory and give starter rods
-        inventoryManager.initializePlayerInventory(player);
-        console.log("inventory", inventoryManager.getInventory(player));
-        const entities = world.entityManager.getEntitiesByTag('fishingRod');
-        console.log("rods entities", entities);
-
-        // Give the starter rod
-        inventoryManager.addRodById(player, 'beginner-rod');
-        console.log("inventory2", inventoryManager.getInventory(player));
-        const entities2 = world.entityManager.getEntitiesByTag('fishingRod');
-        console.log("rods entities2", entities2);
-
-
-        player.ui.load("ui/index.html");
-        messageManager.sendGameMessage("Welcome to phsh! Select your beginner rod in equipment and get fishing!", player);
-
-
-        // Initialize fishing mini-game system
-       // const fishingMiniGame = new FishingMiniGame(world, inventoryManager, levelingSystem, player);
-
-        // Listen for UI events
-        player.ui.onData = (playerUI: PlayerUI, data: Record<string, any>) => {
-          console.log('[Server] Received UI action:', data);
-          
-          if (data.type === 'disablePlayerInput') {
-              console.log('[Server] Disabling player input due to UI interaction');
-              player.ui.lockPointer(false);
-          } else if (data.type === 'enablePlayerInput') {
-              console.log('[Server] Enabling player input');
-              player.ui.lockPointer(true);
-          } else if (data.type === 'updateGameHeight') {
-              fishingMiniGame.updateUIHeight(data.height);
-          }
-          if (data.type === 'equipItem' && data.itemId) {
-              console.log('Equipping item:', data.itemId);
-              inventoryManager.equipItem(player, data.itemId);
-              
-              const inventory = inventoryManager.getInventory(player);
-              console.log('Sending updated inventory:', inventory);
-              player.ui.sendData({
-                  type: 'inventoryUpdate',
-                  inventory: inventory
-              });
-          } else if (data.type === 'unequipItem' && data.itemType) {
-              console.log('Unequipping item type:', data.itemType);
-              inventoryManager.unequipItem(player, data.itemType);
-              
-              const inventory = inventoryManager.getInventory(player);
-              console.log('Sending updated inventory:', inventory);
-              player.ui.sendData({
-                  type: 'inventoryUpdate',
-                  inventory: inventory
-              });
-          } else if (data.type === 'purchaseRod') {
-              console.log('Purchasing rod:', data.rodId);
-              stateManager.buyRod(player, data.rodId);
-          } else if (data.type === 'useBait') {
-              console.log('Using bait:', data.itemId);
-              inventoryManager.hookBait(player, data.itemId);
-          }
-      };
-
-      // Initial inventory state
-      player.ui.sendData({
-        type: 'inventoryUpdate',
-        inventory: inventoryManager.getInventory(player)
-      });
-
+      // Initialize controller with the new entity
+      const myController = new MyPlayerController(world);
+      const playerEntity = new GamePlayerEntity(
+        player,
+        world,
+        levelingSystem,
+        stateManager,
+        inventoryManager,
+        fishingMiniGame,
+        merchantManager,
+        baitBlockManager,
+        currencyManager,
+        myController
+    );
+        playerEntity.spawn(world, { x: -2, y: 10, z: 27 });  
+      //  messageManager.sendGameMessage("Welcome to phsh! Select your beginner rod in equipment and get fishing!", player);
 };
 
 /**
@@ -327,7 +142,6 @@ world.onPlayerLeave = (player) => {
 
 world.chatManager.onBroadcastMessage = (player, message) => {
     if (!player) return;
-    
 };
 
 /**

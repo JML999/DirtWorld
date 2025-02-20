@@ -1,29 +1,32 @@
 import { Entity, Player, World } from 'hytopia';
 import { InventoryManager } from './Inventory/InventoryManager';
 import { LevelingSystem } from './LevelingSystem';
-import type { FishingState } from './FishingMiniGame';
+import type { FishingState } from './Fishing/FishingMiniGame';
 import type { InventoryItem } from './Inventory/Inventory';
 import { CurrencyManager } from './CurrencyManager';
 import mapData from './assets/maps/map_test.json';
 import { FISHING_RODS } from './Inventory/RodCatalog';
 import { MessageManager } from './MessageManager';
+
+export type PlayerState = {
+    fishing: FishingState;
+    merchant: {
+        isInteracting: boolean;
+        selectedOption: number | null;
+        currentMerchant: string | null;
+        merchantResponse: string;
+    };
+    swimming: {
+        isSwimming: boolean;
+        breath: number;
+    };
+};
+
 // First, define our state manager
 export class PlayerStateManager {
     private readonly PLAYER_EYE_HEIGHT = 0.1; // Assuming a default eye height
 
-    private states: Map<Player, {
-        fishing: FishingState;
-        merchant: {
-            isInteracting: boolean;
-            selectedOption: number | null;
-            currentMerchant: string | null;
-            merchantResponse: string;
-        };
-        swimming: {
-            isSwimming: boolean;
-            breath: number;
-        };
-    }> = new Map();
+    private states: Map<Player, PlayerState> = new Map();
 
     constructor(
         private inventoryManager: InventoryManager,
@@ -51,7 +54,11 @@ export class PlayerStateManager {
                     barPosition: 0.5,
                     fishVelocity: 0.005,
                     progress: 25,
-                    currentCatch: null
+                    currentCatch: null,
+                    time: 0,
+                    amplitude: 0.5,
+                    frequency: 0.05,
+                    basePosition: 0.5
                 },
             },
             merchant: {
@@ -84,10 +91,6 @@ export class PlayerStateManager {
             }
         }
         this.states.delete(player);
-    }
-
-    getEquippedRod(player: Player) {
-        return this.inventoryManager.getEquippedRod(player);
     }
 
     getInventory(player: Player) {
@@ -203,47 +206,21 @@ export class PlayerStateManager {
         return true;
     }
 
+    private initializeDevState(player: Player) {
+        // Set to max level with 0 XP
+       // this.levelingSystem.setPlayerLevel(player, 20, 0);
 
-    isInWater(entity : any) {
-        const startPos = {
-            x: entity.position.x,
-            y: entity.position.y + this.PLAYER_EYE_HEIGHT,
-            z: entity.position.z
-        };
-        return this.isWaterBlock(startPos);
+        // Add all rods from catalog
+        FISHING_RODS.forEach(rod => {
+            this.addInventoryItem(player, { ...rod, quantity: 1 });
+        });
+
+        // Set best rod (Hytopian Rod) as equipped
+        this.inventoryManager.equipItem(player, 'hytopian_rod');
     }
 
-    isWaterBlock(position: { x: number, y: number, z: number }): boolean {
-        const blockKey = `${Math.floor(position.x)},${Math.floor(position.y)},${Math.floor(position.z)}`;
-        const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
-        return blockTypeId === 43 || blockTypeId === 42 || blockTypeId === 100;
-    }
-
-    isWaterBelow(entity: any): boolean {
-        const startPos = {
-            x: Math.floor(entity.position.x),
-            y: Math.floor(entity.position.y),
-            z: Math.floor(entity.position.z)
-        };
-
-        // Loop downward until we hit first block
-        for (let y = startPos.y; y > 0; y--) {
-            const blockKey = `${startPos.x},${y},${startPos.z}`;
-            const blockTypeId = (mapData.blocks as Record<string, number>)[blockKey];
-            
-            // Skip if air block (undefined)
-            if (!blockTypeId) continue;
-
-            // Return true if first block found is water
-            return blockTypeId === 43 || blockTypeId === 42 || blockTypeId === 100;
-        }
-
-        return false;
-    }
-
-    // Then combine both checks
-    isInOrOnWater(entity: any): boolean {
-        return this.isInWater(entity) || this.isWaterBelow(entity);
+    public initDevMode(player: Player) {
+        this.initializeDevState(player);
     }
 
 }

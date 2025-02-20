@@ -36,9 +36,11 @@ export interface InventoryItem {
             baited?: boolean;
         };
         baitStats?: {
-            attractionRate: number;
+            baseLuck: number;
             targetSpecies?: string[];
-            duration: number;
+            speciesLuck?: {
+                [key: string]: number;
+            };
             specialEffect?: string;
         };
     }

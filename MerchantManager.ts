@@ -4,7 +4,7 @@ import { Collider } from 'hytopia';
 import { PlayerEntity } from 'hytopia';
 import { SceneUI } from 'hytopia';
 import { FISHING_RODS } from './Inventory/RodCatalog';
-import { FISHING_KNOWLEDGE } from './FishingKnowledge';
+import { FISHING_KNOWLEDGE } from './Fishing/FishingKnowledge';
 
 interface MerchantConfig {
     id: string;
@@ -115,7 +115,6 @@ export class MerchantManager {
             }
           },
         });
-        console.log("Merchant spawned:", merchant.isSpawned, merchant.position);
         this.merchants.set(config.id, merchant);
     }
 
@@ -279,10 +278,8 @@ export class MerchantManager {
     }
 
     private removeDialog(player: Player) {
-        console.log("Starting dialog removal");
         const existingDialog = this.activeDialogs.get(player);
         if (existingDialog) {
-            console.log("Found existing dialog, unloading");
             existingDialog.unload();
             this.activeDialogs.delete(player);
             

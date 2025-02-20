@@ -24,7 +24,7 @@ export class LevelingSystem {
         },
         {
             level: 2,
-            xpRequired: 100,
+            xpRequired: 50,
             rewards: { 
                 tileSlots: 2,
                 newFishTypes: ['pufferfish'],
@@ -33,7 +33,7 @@ export class LevelingSystem {
         },
         {
             level: 3,
-            xpRequired: 250,
+            xpRequired: 60,
             rewards: { 
                 tileSlots: 3,
                 newFishTypes: ['grouper'],
@@ -42,7 +42,7 @@ export class LevelingSystem {
         },
         {
             level: 4,
-            xpRequired: 350,
+            xpRequired: 70,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: ['squid'],
@@ -51,7 +51,7 @@ export class LevelingSystem {
         },
         {
             level: 5,
-            xpRequired: 500,
+            xpRequired: 80,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],
@@ -60,7 +60,7 @@ export class LevelingSystem {
         },  
         {
             level: 6,
-            xpRequired: 650,
+            xpRequired: 90,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],
@@ -69,7 +69,7 @@ export class LevelingSystem {
         },  
         {
             level: 7,
-            xpRequired: 800,
+            xpRequired: 90,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -78,7 +78,7 @@ export class LevelingSystem {
         },  
         {
             level: 8,
-            xpRequired: 950,
+            xpRequired: 90,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -87,7 +87,7 @@ export class LevelingSystem {
         },    
         {
             level: 9,
-            xpRequired: 1100,
+            xpRequired: 90,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -96,7 +96,7 @@ export class LevelingSystem {
         },  
         {
             level: 10,
-            xpRequired: 1500    ,
+            xpRequired: 100    ,
             rewards: {           
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -105,7 +105,7 @@ export class LevelingSystem {
                 },  
         {
             level: 11,
-            xpRequired: 2000,
+            xpRequired: 110,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -114,7 +114,7 @@ export class LevelingSystem {
             },  
         {
             level: 12,
-            xpRequired: 2500,
+            xpRequired: 120,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -123,7 +123,7 @@ export class LevelingSystem {
         },  
         {
             level: 13,
-            xpRequired: 3000,
+            xpRequired: 130,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -132,7 +132,7 @@ export class LevelingSystem {
         },  
         {   
             level: 14,
-            xpRequired: 3500,
+            xpRequired: 150,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -141,7 +141,7 @@ export class LevelingSystem {
         },  
         {
             level: 15,
-            xpRequired: 4000,
+            xpRequired: 200,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -150,7 +150,7 @@ export class LevelingSystem {
         },  
         {
             level: 16,
-            xpRequired: 5000,
+            xpRequired: 250,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],      
@@ -159,7 +159,7 @@ export class LevelingSystem {
         },  
         {
             level: 17,
-            xpRequired: 6000,
+            xpRequired: 300,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -168,7 +168,7 @@ export class LevelingSystem {
         },        
         {
             level: 18,
-            xpRequired: 7500,
+            xpRequired: 350,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],      
@@ -177,7 +177,7 @@ export class LevelingSystem {
         },  
         {
             level: 19,
-            xpRequired: 8000,
+            xpRequired: 400,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],     
@@ -186,7 +186,7 @@ export class LevelingSystem {
         },        
         {
             level: 20,
-            xpRequired: 1000,
+            xpRequired: 500,
             rewards: { 
                 tileSlots: 4,
                 newFishTypes: [''],      
@@ -211,22 +211,46 @@ export class LevelingSystem {
         const currentLevel = this.getCurrentLevel(player);
         const nextLevel = LevelingSystem.FISHING_LEVELS.find(l => l.level === currentLevel + 1);
         if (!nextLevel) return 0; // Max level reached
+        
+        // For Option 1 (Reset XP):
         return nextLevel.xpRequired - this.getCurrentXP(player);
+        
+        /* For Option 2 (Bank XP):
+        const currentXP = this.getCurrentXP(player);
+        return nextLevel.xpRequired - currentXP;
+        */
     }
 
     public addXP(player: Player, xp: number): void {
         const playerData = this.getPlayerData(player);
         const oldLevel = playerData.level;
         
+        // Add XP
         playerData.xp += xp;
         
         // Check for level ups
         while (true) {
             const nextLevel = LevelingSystem.FISHING_LEVELS.find(l => l.level === playerData.level + 1);
-            if (!nextLevel || playerData.xp < nextLevel.xpRequired) break;
+            if (!nextLevel) break; // Max level reached
             
-            playerData.level++;
-            this.handleLevelUp(player, playerData.level);
+            // Option 1: Reset XP each level
+            if (playerData.xp >= nextLevel.xpRequired) {
+                playerData.level++;
+                playerData.xp = 0;  // Reset XP to 0 for next level
+                this.handleLevelUp(player, playerData.level);
+            } else {
+                break;
+            }
+
+            /* Option 2: Bank excess XP (uncomment this and comment out Option 1 if preferred)
+            if (playerData.xp >= nextLevel.xpRequired) {
+                playerData.level++;
+                playerData.xp -= nextLevel.xpRequired;  // Subtract required XP and keep excess
+                this.handleLevelUp(player, playerData.level);
+            } else {
+                break;
+            }
+            */
         }
 
         this.savePlayerData(player, playerData);
@@ -362,6 +386,13 @@ export class LevelingSystem {
 
     public onPlayerDataLoad(player: Player) {
         // Send UI update when player data is loaded from save
+        this.sendLevelUIUpdate(player);
+    }
+
+    public setPlayerLevel(player: Player, level: number, xp: number) {
+        const playerData = { level, xp };
+        this.playerLevels.set(player.id, playerData);
+        this.savePlayerData(player, playerData);
         this.sendLevelUIUpdate(player);
     }
 }

@@ -1,16 +1,17 @@
 import { Player, type PlayerInput } from "hytopia";
 import { World } from "hytopia";
 import { Vector3 } from "hytopia";
-import { InventoryManager } from "./Inventory/InventoryManager";
-import mapData from './assets/maps/map_test.json';
+import { InventoryManager } from "../Inventory/InventoryManager";
+import mapData from '../assets/maps/map_test.json';
 import { Entity } from "hytopia";
-import type { LevelingSystem } from './LevelingSystem';
-import { PIER_FISH_CATALOG } from './fishCatalog';
-import type { FishData } from './fishCatalog';
-import type { ItemRarity } from './Inventory/Inventory';
-import { FishSelector, type CaughtFish } from './FishSelector';
-import type { PlayerStateManager } from "./PlayerStateManager";
-import { MessageManager } from "./MessageManager";
+import type { LevelingSystem } from '../LevelingSystem';
+import { FISH_CATALOG } from './FishCatalog';
+import type { ItemRarity } from '../Inventory/Inventory';
+import type { PlayerStateManager } from "../PlayerStateManager";
+import { MessageManager } from "../MessageManager";
+import { FishSpawnManager, type CaughtFish } from "./FishSpawnManager";
+import type { GamePlayerEntity } from "../GamePlayerEntity";
+import { ReelingMovementController, MovementPattern } from './ReelingMovementController';
 
 export interface FishingState {
     isCasting: boolean;
@@ -33,12 +34,17 @@ interface ReelingState {
     fishVelocity: number;
     progress: number;
     currentCatch: CaughtFish | null;
+
+     // Add new properties
+     time: number;
+     amplitude: number;
+     frequency: number;
+     basePosition: number;
 }
 
 export class FishingMiniGame {
     public reelingGame: ReelingGame;
     public isPlayerFishing = false;
-    private fishSelector: FishSelector;
     private currentCatch: CaughtFish | null = null;
 
     private readonly MAX_POWER = 100;
@@ -58,9 +64,10 @@ export class FishingMiniGame {
         private levelingSystem: LevelingSystem,
         private stateManager: PlayerStateManager,
         private messageManager: MessageManager,
+        private fishSpawnManager: FishSpawnManager
     ) {
         this.reelingGame = new ReelingGame(this.levelingSystem, world, inventoryManager, stateManager, this.messageManager);
-        this.fishSelector = new FishSelector(world, inventoryManager, levelingSystem);
+        this.fishSpawnManager = fishSpawnManager;
     }
 
 
@@ -71,8 +78,9 @@ export class FishingMiniGame {
         
 
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];    
-        if (this.stateManager.isInOrOnWater(playerEntity)) { return }
-    
+        let gamePlayerEntity = playerEntity as GamePlayerEntity;
+        if (gamePlayerEntity.isInOrOnWater(playerEntity)) { return }
+        console.log("casting", state.fishing.isCasting);
         if (!state.fishing.isCasting) {  // Start the power loop
             state.fishing.isCasting = true;
             state.fishing.castPower = 0;
@@ -95,12 +103,12 @@ export class FishingMiniGame {
         if (!state) return;
 
         state.fishing.isPlayerFishing = true;
-        const rod = this.stateManager.getEquippedRod(player);
-        if (!rod) return;
 
         // Get PlayerEntity for this player
-        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0] as GamePlayerEntity;
         if (!playerEntity) return;
+        const rod = playerEntity.getEquippedRod(player);
+        if (!rod) return;
 
         playerEntity.stopModelAnimations(['cast_back_lower']);
         playerEntity.stopModelAnimations(['cast_back_upper']);
@@ -222,7 +230,13 @@ export class FishingMiniGame {
 
         // Handle casting power
         if (state.fishing.isCasting) {
-            state.fishing.castPower = (state.fishing.castPower + this.POWER_LOOP_SPEED) % this.MAX_POWER;
+            state.fishing.castPower += this.POWER_LOOP_SPEED;
+            
+            // Reset to 0 after reaching or exceeding MAX_POWER
+            if (state.fishing.castPower >= this.MAX_POWER) {
+                state.fishing.castPower = 0;
+            }
+            
             player.ui.sendData({
                 type: 'castingPowerUpdate',
                 power: state.fishing.castPower
@@ -271,7 +285,6 @@ export class FishingMiniGame {
 
     public updateUIHeight(height: number) {
         this.uiHeight = height;
-        console.log("Updated UI height:", height);
     }
 
     // Add method to check if reeling is active
@@ -288,6 +301,24 @@ export class FishingMiniGame {
         playerEntity.stopModelAnimations(['cast_foward_lower']);
         playerEntity.stopModelAnimations(['cast_foward_upper']);
 
+        //RUNNING SIMULATION
+        this.fishSpawnManager.runFishSimulation(new Vector3(landingPos.x, landingPos.y, landingPos.z), player);
+        state.fishing.currentCatch = this.fishSpawnManager.getFishAtLocation(new Vector3(landingPos.x, landingPos.y, landingPos.z), Date.now(), player);
+
+                // Always send fishingComplete to dismiss the jig UI
+        player?.ui.sendData({
+            type: 'fishingComplete'
+        });
+        
+        if (state.fishing.currentCatch) {
+            // Start reeling game
+            this.reelingGame.startReeling(player, state.fishing.currentCatch);
+            state.fishing.isPlayerFishing = false;
+        } else {
+            state.fishing.isPlayerFishing = false;
+        }
+
+        /*
         state.fishing.currentCatch = this.fishSelector.getFish(player, state.fishing.fishDepth, landingPos);
         const success = this.currentCatch !== null;
         var rodMaxWeight = this.stateManager.getEquippedRod(player)?.metadata?.rodStats?.maxCatchWeight;
@@ -319,8 +350,8 @@ export class FishingMiniGame {
             console.log("no jig", state.fishing.isPlayerFishing);
             this.messageManager.sendGameMessage("Fish aren't biting here.", player);
         }
+        */
     }
-
 }
 
 class ReelingGame {
@@ -345,74 +376,48 @@ class ReelingGame {
     private readonly BASE_FISH_SPEED = 0.005;
     private readonly VALUE_SPEED_MULTIPLIER = 0.00002; // Adjust this value to tune difficulty
     private messageManager: MessageManager;
+    private movementController: ReelingMovementController;
+    private pattern: MovementPattern = MovementPattern.DEFAULT;
+    private time: number = 0;
+    
     constructor(levelingSystem: LevelingSystem, world: World, inventoryManager: InventoryManager, stateManager: PlayerStateManager, messageManager: MessageManager) {
         this.levelingSystem = levelingSystem;
         this.world = world;
         this.inventoryManager = inventoryManager;
         this.stateManager = stateManager;
         this.messageManager = messageManager;
+        this.movementController = new ReelingMovementController();
     }
 
     startReeling(player: Player, fish: CaughtFish) {
         const state = this.stateManager.getState(player);
         if (!state) return;
-        let rodCheck = this.stateManager.getEquippedRod(player);
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0] as GamePlayerEntity;
+        let rodCheck = playerEntity.getEquippedRod(player);
         if (!rodCheck) return;
    
-        // Calculate velocity based on fish value
-        var fishVelocity = this.BASE_FISH_SPEED + (fish.value * this.VALUE_SPEED_MULTIPLIER);
-        if (rodCheck.id === 'fire_rod') {
-           this.BAR_SPEED *= 0.95;
-        } else if (rodCheck.id === 'ice_rod') {
-            fishVelocity *= 0.95;
-        }
-
-        // Reduce velocity for higher value fish
-        if (fish.value > 5000) {
-            fishVelocity *= 0.45;  // Only 40% of calculated speed
-        }else if (fish.value > 3000) {
-            fishVelocity *= 0.48;  // Only 40% of calculated speed
-        }else if (fish.value > 2000) {
-            fishVelocity *= 0.50;  // Only 40% of calculated speed
-        }else if (fish.value > 1500) {
-            fishVelocity *= 0.55;  // Only 40% of calculated speed
-        } else if (fish.value > 1000) {
-            fishVelocity *= 0.58;  // Only 40% of calculated speed
-        } else if (fish.value > 800) {
-            fishVelocity *= 0.60;
-        } else if (fish.value > 600) {
-            fishVelocity *= 0.70;
-        } else if (fish.value > 400) {
-            fishVelocity *= 0.80;
-        } else if (fish.value > 200) {
-            fishVelocity *= 0.90;
-        }
-
-         // Small additional reductions based on player level
-        const playerLevel = this.levelingSystem.getCurrentLevel(player);
-        if (playerLevel >= 20) {
-            fishVelocity *= 0.87;  // 15% reduction
-        } else if (playerLevel >= 15) {
-            fishVelocity *= 0.89;  // 12% reduction
-        } else if (playerLevel >= 10) {
-            fishVelocity *= 0.91;  // 9% reduction
-        } else if (playerLevel >= 5) {
-            fishVelocity *= 0.94;  // 6% reduction
-        }
-
-
+        const fishVelocity = this.movementController.calculateInitialVelocity(fish, rodCheck);
+        this.pattern = this.movementController.getMovementPattern(fish);
+        this.time = 0;
+        
         state.fishing.reelingGame = {
             isReeling: true,
-            fishPosition: 0.5,  // Start in middle
-            barPosition: 0.5,   // Start in middle
+            fishPosition: 0.5,
+            barPosition: 0.5,
             fishVelocity: fishVelocity,
-            progress: 25,   
-            currentCatch: fish     // Starting progress
+            progress: 25,
+            currentCatch: fish,
+            // Add new properties for sinusoidal movement
+            time: 0,
+            amplitude: 0.2 + (Math.random() * 0.2),  // Random between 0.2-0.4
+            frequency: 0.05 + (Math.random() * 0.05), // Random between 0.05-0.1
+            basePosition: 0.5  // Center point for oscillation
         };
         
         player.ui.sendData({
             type: 'startReeling'
         });
+        this.movementController.resetState();
     }
 
     onTick(player: Player | null) {
@@ -422,12 +427,17 @@ class ReelingGame {
         if (!state || !state.fishing.reelingGame.isReeling || !player.input) { return; }
 
         const game = state.fishing.reelingGame;
-        // Update fish position
-        game.fishPosition += game.fishVelocity;
-        if (game.fishPosition <= 0.1 || game.fishPosition >= 0.9) {
-            game.fishVelocity *= -1;
-        }
-
+        
+        this.time += 1;
+        const movement = this.movementController.updateFishPosition(
+            game.fishPosition,
+            game.fishVelocity,
+            this.pattern,
+            this.time
+        );
+        
+        game.fishPosition = movement.position;
+        game.fishVelocity = movement.velocity;
 
         // Update bar position
         if (player.input['q']) {
@@ -534,7 +544,7 @@ class ReelingGame {
 
     private getFishDetails(caughtFish: CaughtFish) {
         // Look up the base fish data from catalog
-        const fishData = PIER_FISH_CATALOG.fish.find(f => f.name === caughtFish.name);
+        const fishData = FISH_CATALOG.find(f => f.name === caughtFish.name);
         if (!fishData) {
             console.error(`Could not find fish data for id: ${caughtFish.id}`);
             return null;
@@ -559,7 +569,7 @@ class ReelingGame {
         existingDisplays.forEach(entity => entity.despawn());
 
         // Get fish data from catalog
-        const fishData = PIER_FISH_CATALOG.fish.find(f => f.name === fish.name);
+        const fishData = FISH_CATALOG.find(f => f.name === fish.name);
         if (!fishData) return;
 
         // Calculate display scale
