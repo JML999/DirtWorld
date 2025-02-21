@@ -153,7 +153,7 @@ export class BaitBlockManager {
         }
     }
 
-    private spawnInRandomZone() {
+    private spawnInRandomZone(): boolean {
         // Convert zones to array and shuffle
         const availableZones = Array.from(this.zoneStates.entries())
             .filter(([_, state]) => {
@@ -165,8 +165,9 @@ export class BaitBlockManager {
         // Try to spawn in first available zone from shuffled list
         if (availableZones.length > 0) {
             const [zoneId, _] = availableZones[0];
-            this.spawnBlockInZone(zoneId);
+            return this.spawnBlockInZone(zoneId);
         }
+        return false;
     }
 
     private getZonePosition(zoneId: string): Vector3 {
@@ -222,10 +223,22 @@ export class BaitBlockManager {
             this.removeBaitBlock(entityId);
           //  this.balanceZones();
          //   this.spawnInFarthestZone(hitPosition);
-                    // Add blocks until we reach 7 total
-            while (this.baitBlocks.size < 7) {
-                console.log(`Adding block to reach target count. Current: ${this.baitBlocks.size}`);
-                this.spawnInRandomZone();
+        // Add blocks until we reach 7 total
+            const MAX_SPAWN_ATTEMPTS = 20; // Prevent infinite loops
+            let attempts = 0;
+            
+            while (this.baitBlocks.size < 7 && attempts < MAX_SPAWN_ATTEMPTS) {
+                console.log(`Adding block to reach target count. Current: ${this.baitBlocks.size}, Attempt: ${attempts + 1}`);
+                const success = this.spawnInRandomZone();
+                if (!success) {
+                    attempts++;
+                } else {
+                    attempts = 0;
+                }
+            }
+
+            if (attempts >= MAX_SPAWN_ATTEMPTS) {
+                console.warn('Failed to spawn all bait blocks after maximum attempts');
             }
             console.log('bait blocks after block hit and checkInvalidBlocks replace');
             console.log(this.baitBlocks.size);
