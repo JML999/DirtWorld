@@ -125,7 +125,6 @@ export class MyPlayerController extends PlayerEntityController {
         // Restrict movement while fishing
         
         if (this.isInFishingState(state)) {
-            console.log("is in fishing state");
             this.restrictMovement(input);
         }
         playerEntity.setFishingTick();
