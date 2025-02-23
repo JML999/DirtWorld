@@ -7,6 +7,10 @@ export class InventoryManager {
     private inventories: Map<string, PlayerInventory> = new Map();
     private equippedRodEntities: Map<string, Entity> = new Map();
     private equippedFishEntities: Map<string, Entity> = new Map();
+    private currentRodEntity: Map<string, Entity> = new Map();
+    private rodOperationInProgress: Map<string, boolean> = new Map(); // Track ongoing operations
+    private rodOperationTimeout: Map<string, ReturnType<typeof setTimeout>> = new Map(); // Track timeouts
+
     constructor(world: World) {
         this.world = world;
     }
@@ -79,6 +83,16 @@ export class InventoryManager {
     }
 
     public cleanup(player: Player) {
+        // Clear any pending timeouts
+        const existingTimeout = this.rodOperationTimeout.get(player.id);
+        if (existingTimeout) {
+            clearTimeout(existingTimeout);
+        }
+
+        this.safeCleanupRodEntity(player);
+        this.rodOperationInProgress.delete(player.id);
+        this.rodOperationTimeout.delete(player.id);
+
         const inventory = this.getInventory(player);
         if (inventory) {
             // Create a copy of items array since we'll be modifying it during iteration
@@ -117,6 +131,14 @@ export class InventoryManager {
             return true;
         }
 
+        // Unequip any currently equipped items of the same type
+        inventory.items.forEach(i => {
+            if (i.type === item.type) {
+                i.equipped = false;
+                this.unequipItem(player, i.type);
+            }
+        });
+
         // Handle rod equipment
         if (item.type === 'rod') {
             this.equipRod(player, item);
@@ -126,14 +148,6 @@ export class InventoryManager {
         } else if (item.type === 'bait') {
             this.equipBait(player, item);
         }
-
-        // Unequip any currently equipped items of the same type
-        inventory.items.forEach(i => {
-            if (i.type === item.type) {
-                i.equipped = false;
-                this.unequipItem(player, i.type);
-            }
-        });
 
         // Equip the new item
         item.equipped = true;
@@ -155,39 +169,75 @@ export class InventoryManager {
         this.hookBait(player, item.id);
     }
 
-    equipRod(player: Player, item: InventoryItem){
-        const oldRodEntity = this.equippedRodEntities.get(player.id);
-        if (oldRodEntity) {
-            oldRodEntity.despawn();
+    async equipRod(player: Player, item: InventoryItem): Promise<boolean> {
+        // Prevent concurrent rod operations
+        if (this.rodOperationInProgress.get(player.id)) {
+            console.log('Rod operation already in progress, skipping');
+            return false;
         }
 
-        let scale = 1;
-        let modelRotation = { x: -0.7071068, y: 0, z: 0, w: 0.7071068 };
-        if (item.metadata.rodStats?.custom == true){
-            scale = 5;
-            modelRotation = { x: 0, y: 0, z: 0, w: 1 };
-        } else {
-            scale = 1;
-            modelRotation = { x: -0.7071068, y: 0, z: 0, w: 0.7071068 };
+        try {
+            this.rodOperationInProgress.set(player.id, true);
+
+            // Clear any pending timeouts
+            const existingTimeout = this.rodOperationTimeout.get(player.id);
+            if (existingTimeout) {
+                clearTimeout(existingTimeout);
+            }
+
+            // Clean up existing rod with verification
+            await this.safeCleanupRodEntity(player);
+
+            // Create new rod entity with verification
+            const rodEntity = new Entity({
+                name: 'fishingRod',
+                tag: 'fishingRod',
+                modelUri: `models/items/${item.modelId}.gltf`,
+                parent: this.world.entityManager.getPlayerEntitiesByPlayer(player)[0],
+                parentNodeName: 'hand_right_anchor',
+                modelScale: item.metadata.rodStats?.custom ? 5 : 1,
+            });
+
+            // Verify entity creation was successful
+            if (!rodEntity) {
+                throw new Error('Failed to create rod entity');
+            }
+
+            const rotation = item.metadata.rodStats?.custom 
+                ? { x: 0, y: 0, z: 0, w: 1 }
+                : { x: -0.7071068, y: 0, z: 0, w: 0.7071068 };
+
+            await rodEntity.spawn(this.world, { x: 0, y: 0, z: 0 }, rotation);
+            
+            // Set a timeout to clear the operation lock
+            const timeout = setTimeout(() => {
+                this.rodOperationInProgress.set(player.id, false);
+                this.rodOperationTimeout.delete(player.id);
+            }, 500); // 500ms safety buffer
+
+            this.rodOperationTimeout.set(player.id, timeout);
+            this.currentRodEntity.set(player.id, rodEntity);
+
+            return true;
+        } catch (error) {
+            console.error('Error during rod equipment:', error);
+            this.rodOperationInProgress.set(player.id, false);
+            return false;
         }
+    }
 
-        // Create new rod entity
-        const newRodEntity = new Entity({
-            name: 'fishingRod',
-            tag: 'fishingRod',
-            modelUri: `models/items/${item.modelId}.gltf`,
-            parent: this.world.entityManager.getPlayerEntitiesByPlayer(player)[0],
-            parentNodeName: 'hand_right_anchor',
-            modelScale: scale,
-        });
-
-        newRodEntity.spawn(
-            this.world,
-            { x: 0, y: 0, z: 0 },  // position
-            { x: modelRotation.x, y: modelRotation.y, z: modelRotation.z, w: modelRotation.w }  // rotation
-        );
-
-        this.equippedRodEntities.set(player.id, newRodEntity);
+    private async safeCleanupRodEntity(player: Player): Promise<void> {
+        try {
+            const existingRod = this.currentRodEntity.get(player.id);
+            if (existingRod && existingRod.id && this.world.entityManager.getEntity(existingRod.id)) {
+                await existingRod.despawn();
+            }
+            this.currentRodEntity.delete(player.id);
+        } catch (error) {
+            console.error('Error during rod cleanup:', error);
+            // Force cleanup of references even if despawn fails
+            this.currentRodEntity.delete(player.id);
+        }
     }
 
     getEquippedFish(player: Player): InventoryItem | null {
@@ -255,8 +305,13 @@ export class InventoryManager {
         return true;
     }
 
-
     unequipItem(player: Player, type: string): boolean {
+        // Prevent unequip if operation in progress
+        if (type === 'rod' && this.rodOperationInProgress.get(player.id)) {
+            console.log('Rod operation in progress, skipping unequip');
+            return false;
+        }
+
         const inventory = this.inventories.get(player.id);
         if (!inventory) return false;
 
@@ -264,13 +319,8 @@ export class InventoryManager {
         if (equippedItem) {
             equippedItem.equipped = false;
             
-            // Remove rod entity if it's a fishing rod
             if (type === 'rod') {
-                const rodEntity = this.equippedRodEntities.get(player.id);
-                if (rodEntity) {
-                    rodEntity.despawn();
-                    this.equippedRodEntities.delete(player.id);
-                }
+                this.safeCleanupRodEntity(player);
             } else if (type === 'fish') {
                 const fishEntity = this.equippedFishEntities.get(player.id);
                 if (fishEntity) {
@@ -317,5 +367,11 @@ export class InventoryManager {
         } else {
             console.warn(`Rod with id ${rodId} not found`);
         }
+    }
+
+    // Helper method to check rod entity state
+    isRodEntityValid(player: Player): boolean {
+        const rodEntity = this.currentRodEntity.get(player.id);
+        return !!(rodEntity?.id && this.world.entityManager.getEntity(rodEntity.id));
     }
 }

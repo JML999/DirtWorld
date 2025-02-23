@@ -129,7 +129,18 @@ class InventoryPanel {
                 type: 'unequipItem',
                 itemType: 'rod'
             });
+            // Update UI state
+            document.getElementById('current-rod').textContent = 'No Rod';
             this.currentRod = null;
+            
+            // Update equip button states
+            document.querySelectorAll('.equip-button').forEach(button => {
+                button.textContent = 'Equip';
+                const rodItem = button.closest('.rod-item');
+                if (rodItem) {
+                    rodItem.classList.remove('equipped');
+                }
+            });
         } else if (this.lastEquippedRod) {
             hytopia.sendData({
                 type: 'equipItem',
@@ -284,10 +295,33 @@ class InventoryPanel {
                 const rodId = e.target.dataset.rodId;
                 if (rodId) {
                     console.log('Attempting to equip rod:', rodId);
+                    // Use consistent message type
                     hytopia.sendData({
                         type: 'equipItem',
                         itemId: rodId
                     });
+                    
+                    // Update UI immediately for better responsiveness
+                    document.querySelectorAll('.equip-button').forEach(btn => {
+                        btn.textContent = 'Equip';
+                        const rodItem = btn.closest('.rod-item');
+                        if (rodItem) {
+                            rodItem.classList.remove('equipped');
+                        }
+                    });
+                    
+                    button.textContent = 'Equipped';
+                    const rodItem = button.closest('.rod-item');
+                    if (rodItem) {
+                        rodItem.classList.add('equipped');
+                    }
+                    
+                    this.currentRod = rodId;
+                    this.lastEquippedRod = rodId;
+                    
+                    // Update toolbar display
+                    const rodName = rodItem.querySelector('.rod-name').textContent;
+                    document.getElementById('current-rod').textContent = rodName;
                 }
             });
         });
@@ -370,7 +404,6 @@ class InventoryPanel {
                     <div class="fish-stats">
                         Rarity: ${fish.rarity}<br>
                         Weight: ${fish.metadata.fishStats.weight}lb<br>
-                        Size: ${fish.metadata.fishStats.size}cm
                     </div>
                     <div class="fish-value">${fish.value} coins</div>
                 </div>

@@ -85,14 +85,11 @@ export class GamePlayerEntity extends PlayerEntity {
     }
 
     public handleFishing() {
-
         this.isFishing = true;
         this.fishingMiniGame.onCastStart(this.player);
     }
 
     public stopFishing() {
-     
-
         this.isFishing = false;
     }
 
@@ -170,12 +167,19 @@ export class GamePlayerEntity extends PlayerEntity {
     }
 
     private handleEquipItem(player: Player, itemId: string): void {
+        if (this.isFishing) {
+            this.fishingMiniGame.abortFishing(player);
+            this.isFishing = false;  // Update local state after abort
+        }
         this.inventoryManager.equipItem(player, itemId);
         this.sendInventoryUIUpdate(player);
     }
 
     private handleUnequipItem(player: Player, itemType: string): void {
-
+        if (this.isFishing) {
+            this.fishingMiniGame.abortFishing(player);
+            this.isFishing = false;  // Update local state after abort
+        }
         this.inventoryManager.unequipItem(player, itemType);
         this.sendInventoryUIUpdate(player);
     }
@@ -217,6 +221,11 @@ export class GamePlayerEntity extends PlayerEntity {
     useBait(player: Player, bait: InventoryItem | null) {
         if (!bait) { return; }
         this.inventoryManager.useBait(player, bait.id);
+    }
+
+    abortFishing(player: Player) {
+        this.fishingMiniGame.abortFishing(player);
+        this.isFishing = false;
     }
 
     isInWater(entity: any) {

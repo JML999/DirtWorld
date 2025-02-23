@@ -129,7 +129,6 @@ export class ReelingMovementController {
         const BASIC_PATTERNS = [
             MovementPattern.DEFAULT,
             MovementPattern.SINE_WAVE,
-            MovementPattern.PULSE,
             MovementPattern.ACCELERATING,
             MovementPattern.ZIGZAG,
             MovementPattern.BURST
@@ -137,10 +136,14 @@ export class ReelingMovementController {
 
         const ADV_PATTERNS = [
             MovementPattern.PULSE,
+            MovementPattern.ZIGZAG,
             MovementPattern.ERRATIC,
             MovementPattern.DEFAULT_TO_ERRATIC,
             MovementPattern.SINE_TO_ERRATIC
         ];
+
+        // List of fish species that should use simpler patterns
+        const SIMPLE_FISH = ['sardine', 'mackerel', 'puffer_fish', 'spotted_flounder'];
 
         // Always use advanced patterns for rare+ species
         if (['rare', 'epic', 'legendary'].includes(speciesRarity)) {
@@ -148,13 +151,14 @@ export class ReelingMovementController {
             return ADV_PATTERNS[randomIndex];
         }
         
-        // Use advanced patterns for rare+ catches of common species
-        if (['Rare', 'Epic', 'Legendary'].includes(fish.rarity)) {
+        // Check fish rarity and species for pattern selection
+        if (fish.rarity === 'Legendary' || 
+            (fish.rarity === 'Epic' && !SIMPLE_FISH.includes(fish.name.split('_')[0]))) {
             const randomIndex = Math.floor(Math.random() * ADV_PATTERNS.length);
             return ADV_PATTERNS[randomIndex];
         }
 
-        // Basic patterns for common/uncommon catches of common species
+        // Basic patterns for all other cases
         const randomIndex = Math.floor(Math.random() * BASIC_PATTERNS.length);
         return BASIC_PATTERNS[randomIndex];
     }

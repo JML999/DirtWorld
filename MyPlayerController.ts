@@ -62,6 +62,15 @@ export class MyPlayerController extends PlayerEntityController {
         const state = playerEntity.stateManager.getState(playerEntity.player);
         if (!state) return;
 
+        // Check for movement input and abort fishing if needed
+        if ((input.w || input.a || input.s || input.d) && 
+            (state.fishing.isPlayerFishing || 
+             state.fishing.isCasting || 
+             state.fishing.isJigging || 
+             state.fishing.reelingGame?.isReeling)) {
+            playerEntity.abortFishing(playerEntity.player);
+        }
+
         const hasRodEquipped = !!playerEntity.getEquippedRod(playerEntity.player);
         
         if (!hasRodEquipped) {
@@ -114,7 +123,9 @@ export class MyPlayerController extends PlayerEntityController {
             playerEntity.handleFishing();
         }
         // Restrict movement while fishing
+        
         if (this.isInFishingState(state)) {
+            console.log("is in fishing state");
             this.restrictMovement(input);
         }
         playerEntity.setFishingTick();

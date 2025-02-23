@@ -82,16 +82,18 @@ export class FishingMiniGame {
         if (gamePlayerEntity.isInOrOnWater(playerEntity)) { return }
         console.log("casting", state.fishing.isCasting);
         if (!state.fishing.isCasting) {  // Start the power loop
+            this.transitionFishingState(player, 'idle', 'casting');
             state.fishing.isCasting = true;
             state.fishing.castPower = 0;
             
             playerEntity.startModelOneshotAnimations([ 'cast_back_lower' ]);
             playerEntity.startModelOneshotAnimations([ 'cast_back_upper' ]);
-            
+            /*
             player.ui.sendData({
                 type: 'castingPowerUpdate',
                 power: state.fishing.castPower
             });
+            */
         } else {  // Stop at current power and cast
             state.fishing.isCasting = false;
             this.onCastEnd(player);
@@ -102,13 +104,20 @@ export class FishingMiniGame {
         const state = this.stateManager.getState(player);
         if (!state) return;
 
-        state.fishing.isPlayerFishing = true;
+        // Clear UI
+        player.ui.sendData({
+            type: 'castingPowerUpdate',
+            power: null
+        });
 
         // Get PlayerEntity for this player
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0] as GamePlayerEntity;
         if (!playerEntity) return;
         const rod = playerEntity.getEquippedRod(player);
         if (!rod) return;
+
+        state.fishing.isPlayerFishing = true;
+
 
         playerEntity.stopModelAnimations(['cast_back_lower']);
         playerEntity.stopModelAnimations(['cast_back_upper']);
@@ -127,6 +136,7 @@ export class FishingMiniGame {
         };
 
         console.log("Start pos:", playerEntity.position);
+        console.log("Cast power:", state.fishing.castPower);
 
         const maxDistance = rod.metadata?.rodStats?.maxDistance ?? 10;
         const distance = (state.fishing.castPower / 100) * maxDistance;
@@ -154,11 +164,7 @@ export class FishingMiniGame {
             playerEntity.stopModelAnimations(['cast_foward_upper']);
             state.fishing.isPlayerFishing = false;
         }
-        // Clear UI
-        player.ui.sendData({
-            type: 'castingPowerUpdate',
-            power: null
-        });
+
     }
 
     private findFishingSpot(startPos: { x: number, y: number, z: number }, 
@@ -209,16 +215,21 @@ export class FishingMiniGame {
         state.fishing.fishVelocityY = 0;  // Start with no velocity
         
         // Show the game UI with new instructions
+        this.transitionFishingState(player, 'casting', 'jigging');  // Add here
+        /*
         player.ui.sendData({
             type: 'startFishing',
             fishDepth: 0.5,  // Start in middle (1/2)
             message: 'Press SPACE to keep the fish from falling! Keep it in the middle zone!'
         });
+        */
 
         setTimeout(() => {
             console.log("Fishing game complete");
-            state.fishing.isJigging = false;
-            this.tryToFish(player, landingPos);
+            if (state.fishing.isJigging) {
+                state.fishing.isJigging = false;
+                this.tryToFish(player, landingPos);
+            }
         }, this.GAME_DURATION);
     }
 
@@ -231,16 +242,16 @@ export class FishingMiniGame {
         // Handle casting power
         if (state.fishing.isCasting) {
             state.fishing.castPower += this.POWER_LOOP_SPEED;
+            player.ui.sendData({
+                type: 'castingPowerUpdate',
+                power: state.fishing.castPower
+            });
             
             // Reset to 0 after reaching or exceeding MAX_POWER
             if (state.fishing.castPower >= this.MAX_POWER) {
                 state.fishing.castPower = 0;
             }
-            
-            player.ui.sendData({
-                type: 'castingPowerUpdate',
-                power: state.fishing.castPower
-            });
+        
         }
 
         // Handle fish physics if player is fishing
@@ -297,6 +308,15 @@ export class FishingMiniGame {
         const state = this.stateManager.getState(player);
         if (!state) return;
 
+        // Always send fishingComplete to dismiss the jig UI
+        this.transitionFishingState(player, 'jigging', 'reeling');  // Add here
+
+       /*
+        player?.ui.sendData({
+            type: 'fishingComplete'
+        });
+        */
+
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
         playerEntity.stopModelAnimations(['cast_foward_lower']);
         playerEntity.stopModelAnimations(['cast_foward_upper']);
@@ -305,10 +325,6 @@ export class FishingMiniGame {
         this.fishSpawnManager.runFishSimulation(new Vector3(landingPos.x, landingPos.y, landingPos.z), player);
         state.fishing.currentCatch = this.fishSpawnManager.getFishAtLocation(new Vector3(landingPos.x, landingPos.y, landingPos.z), Date.now(), player);
 
-                // Always send fishingComplete to dismiss the jig UI
-        player?.ui.sendData({
-            type: 'fishingComplete'
-        });
         
         if (state.fishing.currentCatch) {
             // Start reeling game
@@ -317,40 +333,89 @@ export class FishingMiniGame {
         } else {
             state.fishing.isPlayerFishing = false;
         }
+    }
 
-        /*
-        state.fishing.currentCatch = this.fishSelector.getFish(player, state.fishing.fishDepth, landingPos);
-        const success = this.currentCatch !== null;
-        var rodMaxWeight = this.stateManager.getEquippedRod(player)?.metadata?.rodStats?.maxCatchWeight;
-        
+    private async transitionFishingState(player: Player, from: string, to: string) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+        // Clear UI and chain the new state
+        this.clearAllFishingUI(player).then(() => {
+            switch(to) {
+                case 'casting':
+                    player.ui.sendData({
+                        type: 'castingPowerUpdate',
+                        power: state.fishing.castPower
+                    });
+                    break;
+                case 'jigging':
+                    player.ui.sendData({
+                        type: 'startFishing',
+                        fishDepth: 0.5,
+                        message: 'Press SPACE to keep the fish from falling! Keep it in the middle zone!'
+                    });
+                    break;
+                case 'reeling':
+                    player.ui.sendData({
+                        type: 'fishingComplete'
+                    });
+                    break;
+            }
+        });
+    }
 
-        // Clear jigging state
+    private clearAllFishingUI(player: Player): Promise<void> {
+        return new Promise(resolve => {
+            player.ui.sendData({
+                type: 'fishingComplete'     // Clear jigging UI
+            });
+            player.ui.sendData({
+                type: 'hideReeling'         // Clear reeling UI
+            });
+            player.ui.sendData({
+                type: 'castingPowerUpdate', // Clear casting UI
+                power: null
+            });
+            
+            // Give a tiny window for UI to clear
+            setTimeout(resolve, 16);  // One frame at 60fps
+        });
+    }
+
+    public abortFishing(player: Player) {
+        const state = this.stateManager.getState(player);
+        if (!state) return;
+    
+        // Reset all fishing state flags
+        state.fishing.isCasting = false;
+        state.fishing.isReeling = false;
         state.fishing.isJigging = false;
-        // Clear any existing interval
+        state.fishing.isPlayerFishing = false;
+        state.fishing.currentCatch = null;
+    
+        // Clear any fishing intervals
         if (state.fishing.fishingInterval) {
             clearInterval(state.fishing.fishingInterval);
             state.fishing.fishingInterval = null;
         }
-
-        // Always send fishingComplete to dismiss the jig UI
-        player?.ui.sendData({
-            type: 'fishingComplete'
-        });
-        
-        if (!rodMaxWeight) rodMaxWeight = 10;
-        if (state.fishing.currentCatch && state.fishing.currentCatch.weight <= rodMaxWeight) {
-            console.log("Fish caught: ", state.fishing.currentCatch);
-            // Start reeling game
-            this.reelingGame.startReeling(player, state.fishing.currentCatch);
-            state.fishing.isPlayerFishing = false;
-        } else {
-            // Show "no fish" message
-            console.log("no jig", state.fishing.isPlayerFishing);
-            state.fishing.isPlayerFishing = false;
-            console.log("no jig", state.fishing.isPlayerFishing);
-            this.messageManager.sendGameMessage("Fish aren't biting here.", player);
+    
+        // Reset animations
+        const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+        if (playerEntity) {
+            playerEntity.stopModelAnimations(['cast_back_lower', 'cast_back_upper', 'cast_foward_lower', 'cast_foward_upper']);
+            playerEntity.startModelLoopedAnimations(['idle']);
         }
-        */
+    
+        // Clear all fishing-related UI
+        player.ui.sendData({
+            type: 'fishingComplete'  // Clears jigging UI
+        });
+        player.ui.sendData({
+            type: 'hideReeling'      // Clears reeling UI
+        });
+        player.ui.sendData({
+            type: 'castingPowerUpdate',
+            power: null              // Clears casting UI
+        });
     }
 }
 
