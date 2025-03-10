@@ -94,20 +94,20 @@ export class ReelingMovementController {
 
         // Custom multipliers for rare species (like grouper)
         const RARE_SPECIES_RARITY_MULTIPLIER: Record<string, number> = {
-            'Common': 1.6,
-            'Uncommon': 1.65,
-            'Rare': 1.7,
-            'Epic': 1.75,
+            'Common': 1.7,
+            'Uncommon': 1.725,
+            'Rare': 1.75,
+            'Epic': 1.775,
             'Legendary': 1.8
         };
 
         // Custom multipliers for epic species
         const EPIC_SPECIES_RARITY_MULTIPLIER: Record<string, number> = {
-            'Common': 1.8,
-            'Uncommon': 1.85,
-            'Rare': 1.9,
-            'Epic': 1.95,
-            'Legendary': 1.97
+            'Common': 1.75,
+            'Uncommon': 1.775,
+            'Rare': 1.8,
+            'Epic': 1.825,
+            'Legendary': 1.85
         };
 
         // Custom multipliers for legendary species
@@ -115,8 +115,8 @@ export class ReelingMovementController {
             'Common': 1.85,
             'Uncommon': 1.9,
             'Rare': 1.925,
-            'Epic': 1.95,
-            'Legendary': 2.0
+            'Epic': 2.0,
+            'Legendary': 2.05
         };
 
         // Combine both rarity factors
@@ -172,7 +172,7 @@ export class ReelingMovementController {
         const baitResilliance = equippedBait?.metadata?.baitStats?.resilliance || 1;
         console.log('[FISHING] Found equipped bait:', equippedBait, 'with resilliance:', baitResilliance);
         const fishVelocity = Math.min(finalVelocity, ABSOLUTE_MAX_VELOCITY);
-        const v = fishVelocity * baitResilliance * levelDiscount; 
+        const v = fishVelocity / baitResilliance * levelDiscount; 
         console.log('Fish:', {
             name: fish.name,
             speciesRarity,

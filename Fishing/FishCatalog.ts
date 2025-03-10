@@ -67,7 +67,7 @@ export const FISH_CATALOG: FishData[] = [
         minWeight: 1,
         maxWeight: 5,
         baseValue: 10,
-        isBait: true,
+        isBait: false,
         isLoot: false,
         modelData: {
             modelUri: 'models/npcs/mackerel.gltf',
