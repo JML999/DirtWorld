@@ -400,8 +400,8 @@ export const BAIT_CATALOG: { [key: string]: BaitDefinition } = {
         minHarvestAmount: 1,
         maxHarvestAmount: 1,
         value: 12,
-        baseLuck: 0.85,
-        targetSpecies: [],
+        baseLuck: 1.10,
+        targetSpecies: ['Sharks','Tuna', 'Grouper'],
         speciesLuck: {
             'hammerhead_shark': 1.20,
             'great_white_shark': 1.08,

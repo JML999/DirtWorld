@@ -1,0 +1,34 @@
+{
+  "inventory": {
+    "items": [
+      {
+        "id": "beginner-rod",
+        "modelId": "beginner-rod",
+        "sprite": "beginner_rod_sprite.png",
+        "name": "Beginner Rod",
+        "type": "rod",
+        "rarity": "common",
+        "value": 0,
+        "quantity": 1,
+        "metadata": {
+          "rodStats": {
+            "rarityBonus": 0,
+            "sizeBonus": 0,
+            "maxDistance": 3,
+            "luck": 0.3,
+            "maxCatchWeight": 10,
+            "custom": true,
+            "health": 100,
+            "damage": 0
+          }
+        },
+        "equipped": true
+      }
+    ],
+    "maxSlots": 20,
+    "equippedRod": "beginner-rod"
+  },
+  "level": 1,
+  "xp": 0,
+  "coins": 0
+}
