@@ -211,23 +211,15 @@ export class LevelingSystem {
         const currentLevel = this.getCurrentLevel(player);
         const nextLevel = LevelingSystem.FISHING_LEVELS.find(l => l.level === currentLevel + 1);
         if (!nextLevel) return 0; // Max level reached
-        
         // For Option 1 (Reset XP):
         return nextLevel.xpRequired - this.getCurrentXP(player);
-        
-        /* For Option 2 (Bank XP):
-        const currentXP = this.getCurrentXP(player);
-        return nextLevel.xpRequired - currentXP;
-        */
     }
 
     public addXP(player: Player, xp: number): void {
         const playerData = this.getPlayerData(player);
         const oldLevel = playerData.level;
-        
         // Add XP
         playerData.xp += xp;
-        
         // Check for level ups
         while (true) {
             const nextLevel = LevelingSystem.FISHING_LEVELS.find(l => l.level === playerData.level + 1);
@@ -241,16 +233,6 @@ export class LevelingSystem {
             } else {
                 break;
             }
-
-            /* Option 2: Bank excess XP (uncomment this and comment out Option 1 if preferred)
-            if (playerData.xp >= nextLevel.xpRequired) {
-                playerData.level++;
-                playerData.xp -= nextLevel.xpRequired;  // Subtract required XP and keep excess
-                this.handleLevelUp(player, playerData.level);
-            } else {
-                break;
-            }
-            */
         }
 
         this.savePlayerData(player, playerData);
@@ -295,28 +277,6 @@ export class LevelingSystem {
             newLevel: newLevel,
             rewards: levelData.rewards
         });
-
-        // Apply rewards
-        if (levelData.rewards.tileSlots) {
-            // Update tile capacity
-            // This would be handled by your inventory/tile system
-        }
-
-        if (levelData.rewards.newFishTypes) {
-            // Unlock new fish types
-            // This would be handled by your fishing system
-        }
-
-        if (levelData.rewards.newAreas) {
-            // Unlock new fishing areas
-            // This would be handled by your area system
-        }
-
-        if (levelData.rewards.rodTypes) {
-            // Unlock new rod types
-            // This would be handled by your inventory system
-        }
-
         // Send UI update after level up
         this.sendLevelUIUpdate(player);
     }
@@ -365,18 +325,31 @@ export class LevelingSystem {
     }
 
     // Add this method to send UI updates
-    private sendLevelUIUpdate(player: Player) {
-        const currentLevel = this.getCurrentLevel(player);
-        const currentXP = this.getCurrentXP(player);
-        const nextLevel = LevelingSystem.FISHING_LEVELS.find(l => l.level === currentLevel + 1);
-        const requiredXP = nextLevel ? nextLevel.xpRequired : currentXP;
-
+    public sendLevelUIUpdate(player: Player) {
+        const levelData = this.playerLevels.get(player.id);
+        if (!levelData) {
+            console.warn(`[LEVEL] No level data found for player ${player.id}`);
+            return;
+        }
+        
+        const level = levelData.level;
+        const xp = levelData.xp;
+        const nextLevelXP = this.getXPForNextLevel(level); // Make sure this method exists
+        
+        console.log(`[LEVEL] Sending UI update: level=${level}, xp=${xp}, nextLevelXP=${nextLevelXP}`);
+        
         player.ui.sendData({
             type: 'levelUpdate',
-            level: currentLevel,
-            currentXP: currentXP,
-            requiredXP: requiredXP
+            level: level,
+            xp: xp,
+            nextLevelXP: nextLevelXP
         });
+    }
+
+    // Helper method to calculate XP needed for next level
+    private getXPForNextLevel(level: number): number {
+        // Example formula: 100 * level
+        return 100 * level;
     }
 
     public onPlayerJoin(player: Player) {
@@ -390,9 +363,13 @@ export class LevelingSystem {
     }
 
     public setPlayerLevel(player: Player, level: number, xp: number) {
-        const playerData = { level, xp };
-        this.playerLevels.set(player.id, playerData);
-        this.savePlayerData(player, playerData);
+        console.log(`Setting level for player ${player.id} to ${level} with ${xp} XP`);
+        
+        // Update the player's level in the map
+        this.playerLevels.set(player.id, { level, xp });
+        console.log(`Level map after setting:`, this.playerLevels.get(player.id));
+        
+        // Update UI
         this.sendLevelUIUpdate(player);
     }
 }

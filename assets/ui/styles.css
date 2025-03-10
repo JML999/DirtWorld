@@ -134,6 +134,18 @@
     transition: border-color 0.2s;
 }
 
+.slot-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.slot-subtitle {
+    font-size: 0.8em;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
 .slot:hover {
     border-color: #999;
 }
@@ -171,6 +183,7 @@
     user-select: none;
     -webkit-user-select: none;
     overflow: hidden;
+    z-index: 101;
 }
 
 /* Menu header with title and close button */

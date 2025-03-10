@@ -1,19 +1,19 @@
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type ItemType = 'rod' | 'bait' | 'fish' | 'boat' | 'accessory';
+export type ItemType = 'rod' | 'bait' | 'fish' | 'boat' | 'accessory' |'item';
 
 export interface FishingStats {
-    catchSpeed: number;
-    catchRate: number;
     rarityBonus: number;
     sizeBonus: number;
     maxDistance: number;
     luck: number;
-    durability?: number;
+    health?: number;
+    damage?: number;
 }
 
 export interface InventoryItem {
     id: string;             // Unique identifier for game logic
-    modelId: string;        // ID for the 3D model file
+    modelId: string;  
+    sprite: string;
     name: string;
     type: ItemType;
     rarity: ItemRarity;
@@ -33,15 +33,19 @@ export interface InventoryItem {
             species: string;
             location?: string;
             timestamp?: number;
-            baited?: boolean;
+            isBaitFish?: boolean;
         };
         baitStats?: {
             baseLuck: number;
+            class: string;
             targetSpecies?: string[];
             speciesLuck?: {
                 [key: string]: number;
             };
             specialEffect?: string;
+            description?: string;
+            resilliance?: number;
+            strength?: number;
         };
     }
 }

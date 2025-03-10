@@ -13,6 +13,7 @@ class MerchantPanel {
         template.innerHTML = `
             <div class="merchant-dialog">
                 <h3>Merchant</h3>
+                <div class="merchant-prompt"></div>
                 <div class="options"></div>
             </div>
         `;
@@ -23,12 +24,22 @@ class MerchantPanel {
             const template = document.getElementById('merchant-dialog-template');
             const clone = template.content.cloneNode(true);
             const optionsContainer = clone.querySelector('.options');
+            const promptContainer = clone.querySelector('.merchant-prompt');
         
             onState(state => {
+                // Update prompt
+                if (state.message) {
+                    promptContainer.textContent = state.message;
+                    promptContainer.style.display = 'block';
+                } else {
+                    promptContainer.style.display = 'none';
+                }
+                
+                // Update options
                 optionsContainer.innerHTML = '';
                 state.options.forEach((option, index) => {
                     const div = document.createElement('div');
-                    div.textContent = `[${index + 1}] ${option}`; // Show 1-5 instead of a-e
+                    div.textContent = `[${index + 1}] ${option}`;
                     optionsContainer.appendChild(div);
                 });
             });
@@ -54,16 +65,65 @@ class MerchantPanel {
                 document.querySelector('.merchant-dialog')?.remove();
             } else if (data.type === 'merchantSpeak') {
                 const dialog = document.querySelector('.merchant-dialog');
-                const options = dialog.querySelector('.options');
-                
-                // Clear existing options
-                options.innerHTML = '';
-                
-                // Add merchant's message
-                options.innerHTML = `<div class="merchant-message">${data.message}</div>`;
+                if (dialog) {
+                    const prompt = dialog.querySelector('.merchant-prompt');
+                    if (prompt) {
+                        prompt.textContent = data.message;
+                        prompt.style.display = 'block';
+                    }
+                }
             }
         });
+    }
+
+    updateMerchantDialog(data) {
+        const dialog = document.querySelector('.merchant-dialog');
+        if (!dialog) return;
+        
+        // Update merchant prompt if provided
+        const promptElement = dialog.querySelector('.merchant-prompt');
+        if (promptElement && data.message) {
+            promptElement.textContent = data.message;
+            promptElement.style.display = 'block';
+        } else if (promptElement) {
+            promptElement.style.display = 'none';
+        }
+        
+        // Update options
+        const optionsContainer = dialog.querySelector('.options');
+        if (!optionsContainer) return;
+        
+        optionsContainer.innerHTML = '';
+        
+        if (data.options && data.options.length > 0) {
+            data.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('merchant-option');
+                button.dataset.index = index;
+                button.addEventListener('click', () => {
+                    window.parent.postMessage({
+                        type: 'merchantOption',
+                        merchantId: data.merchantId,
+                        option: index
+                    }, '*');
+                });
+                optionsContainer.appendChild(button);
+            });
+        }
     }
 }
 
 window.MerchantPanel = new MerchantPanel();
+
+const style = document.createElement('style');
+style.textContent = `
+.merchant-prompt {
+    margin-bottom: 15px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #f0f0f0;
+    text-align: center;
+}
+`;
+document.head.appendChild(style);

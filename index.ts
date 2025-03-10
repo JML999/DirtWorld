@@ -40,6 +40,7 @@ import {
   Player,
   SceneUI,
   PlayerUI,
+  PlayerEvent,
 } from 'hytopia';
 
 import { PlayerStateManager } from './PlayerStateManager';
@@ -56,6 +57,8 @@ import { MyPlayerController } from './MyPlayerController';
 import { FishSpawnManager } from './Fishing/FishSpawnManager';
 import { BaitBlockManager } from './Bait/BaitBlockManager';
 import { GamePlayerEntity } from './GamePlayerEntity';
+import GameManager from './GameManager';
+import { CraftingManager } from './Crafting/CraftingManager';
 
 
 /**
@@ -80,8 +83,12 @@ startServer(world => {
     const fishSpawnManager = new FishSpawnManager(stateManager, world);
     const fishingMiniGame = new FishingMiniGame(world, inventoryManager, levelingSystem, stateManager, messageManager, fishSpawnManager);
     const baitBlockManager = new BaitBlockManager(world, stateManager);
+    const craftingManager = new CraftingManager(inventoryManager);
+
+
 
     merchantManager.initialize();
+    GameManager.instance.startRecurringTimers(merchantManager, baitBlockManager);
 
 
     /**
@@ -91,6 +98,7 @@ startServer(world => {
      * the assets folder as map.json.
      */
     world.loadMap(worldMap);
+    
 
     /**
      * Handle player joining the game. The onPlayerJoin
@@ -99,10 +107,13 @@ startServer(world => {
      * entity instance which automatically handles mapping
      * their inputs to control their in-game entity and
      * internally uses our player entity controller.
+     * 
      */
-    world.onPlayerJoin = (player) => {
+    
+    world.on(PlayerEvent.JOINED_WORLD, ({ player }) => {
       // Clean up any orphaned merchant UIs before setting up new ones
       merchantManager.cleanupExistingMerchantUIs();
+      baitBlockManager.cleanupOldBlocks();
 
       // Initialize controller with the new entity
       const myController = new MyPlayerController(world);
@@ -116,43 +127,46 @@ startServer(world => {
         merchantManager,
         baitBlockManager,
         currencyManager,
-        myController
-    );
-        playerEntity.spawn(world, { x: -2, y: 10, z: 27 });  
+        myController,
+        craftingManager
+      );
+      playerEntity.spawn(world, { x: -2, y: 10, z: 27 });  
       //  messageManager.sendGameMessage("Welcome to phsh! Select your beginner rod in equipment and get fishing!", player);
-};
+    });
 
-/**
- * Handle player leaving the game. The onPlayerLeave
- * function is called when a player leaves the game.
- * Because HYTOPIA is not opinionated on join and
- * leave game logic, we are responsible for cleaning
- * up the player and any entities associated with them
- * after they leave. We can easily do this by 
- * getting all the known PlayerEntity instances for
- * the player who left by using our world's EntityManager
- * instance.
- */
-world.onPlayerLeave = (player) => {
-    console.log("player left", player.id);
-    stateManager.cleanup(player);
-    merchantManager.forceCleanup(player);
-    world.entityManager.getPlayerEntitiesByPlayer(player).forEach(entity => entity.despawn());
-};
+    /**
+     * Handle player leaving the game. The onPlayerLeave
+     * function is called when a player leaves the game.
+     * Because HYTOPIA is not opinionated on join and
+     * leave game logic, we are responsible for cleaning
+     * up the player and any entities associated with them
+     * after they leave. We can easily do this by 
+     * getting all the known PlayerEntity instances for
+     * the player who left by using our world's EntityManager
+     * instance.
+     */
+    world.on(PlayerEvent.LEFT_WORLD, ({ player }) => {
+        console.log("player left", player.id);
+        stateManager.cleanup(player);
+        merchantManager.forceCleanup(player);
+        world.entityManager.getPlayerEntitiesByPlayer(player).forEach(entity => entity.despawn());
+    });
 
-world.chatManager.onBroadcastMessage = (player, message) => {
-    if (!player) return;
-};
+    world.chatManager.on('broadcastMessage', ({ player, message }) => {
+        if (!player) return;
+    });
 
-/**
- * Play some peaceful ambient music to
- * set the mood!
- */
-new Audio({
-  uri: "audio/music/hytopia-main.mp3",
-  loop: true,
-  volume: 0.1,
-}).play(world);
+    GameManager.instance.setupGame(world);
+
+    /**
+     * Play some peaceful ambient music to
+     * set the mood!
+     */
+    new Audio({
+      uri: "audio/music/hytopia-main.mp3",
+      loop: true,
+      volume: 0.1,
+    }).play(world);
 
 
 

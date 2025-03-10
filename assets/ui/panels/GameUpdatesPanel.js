@@ -25,7 +25,7 @@ class GameUpdatesPanel {
 
         // Set up message handling
         hytopia.onData(data => {
-            console.log("Received data:", data);
+         
             if (data.type === 'gameUpdate' || data.type === 'welcomeReady') {
                 console.log("Received game update:", data.message);
                 

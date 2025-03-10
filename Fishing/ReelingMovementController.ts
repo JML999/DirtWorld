@@ -1,7 +1,8 @@
 import type { CaughtFish } from './FishSpawnManager';
 import type { GamePlayerEntity } from '../GamePlayerEntity';
 import { FISH_CATALOG } from './FishCatalog';
-
+import type { PlayerStateManager } from '../PlayerStateManager';
+import type { Player } from 'hytopia';
 interface PatternTransition {
     startPattern: MovementPattern;
     endPattern: MovementPattern;
@@ -56,12 +57,13 @@ export class ReelingMovementController {
     private hasTransitioned: boolean = false;
     private leftBounces: number = 0;
     private rightBounces: number = 0;
-
-    constructor() {
+    private playerStateManager: PlayerStateManager;
+    constructor(playerStateManager: PlayerStateManager) {
         this.currentDynamicPattern = MovementPattern.DEFAULT;
+        this.playerStateManager = playerStateManager;
     }
 
-    calculateInitialVelocity(fish: CaughtFish, rod: any): number {
+    calculateInitialVelocity(fish: CaughtFish, rod: any, player: Player): number {
         // Fix species rarity lookup
         const fishType = FISH_CATALOG.find(f => f.name === fish.name.split('_')[0]);
         if (!fishType) {
@@ -74,14 +76,14 @@ export class ReelingMovementController {
 
         // Base difficulty by species rarity
         const SPECIES_BASE: Record<string, number> = {
-            'common': 0.009,
-            'uncommon': 0.010,
-            'rare': 0.011,
+            'common': 0.007,
+            'uncommon': 0.008,
+            'rare': 0.01,
             'epic': 0.012,
-            'legendary': 0.013
+            'legendary': 0.014
         };
 
-        // Additional modifier for caught fish rarity
+        // Base multipliers for common/uncommon species
         const CATCH_RARITY_MULTIPLIER: Record<string, number> = {
             'Common': 1.0,
             'Uncommon': 1.4,
@@ -90,23 +92,87 @@ export class ReelingMovementController {
             'Legendary': 2.1
         };
 
+        // Custom multipliers for rare species (like grouper)
+        const RARE_SPECIES_RARITY_MULTIPLIER: Record<string, number> = {
+            'Common': 1.6,
+            'Uncommon': 1.65,
+            'Rare': 1.7,
+            'Epic': 1.75,
+            'Legendary': 1.8
+        };
+
+        // Custom multipliers for epic species
+        const EPIC_SPECIES_RARITY_MULTIPLIER: Record<string, number> = {
+            'Common': 1.8,
+            'Uncommon': 1.85,
+            'Rare': 1.9,
+            'Epic': 1.95,
+            'Legendary': 1.97
+        };
+
+        // Custom multipliers for legendary species
+        const LEGENDARY_SPECIES_RARITY_MULTIPLIER: Record<string, number> = {
+            'Common': 1.85,
+            'Uncommon': 1.9,
+            'Rare': 1.925,
+            'Epic': 1.95,
+            'Legendary': 2.0
+        };
+
         // Combine both rarity factors
         let baseVelocity = SPECIES_BASE[speciesRarity] || 0.005;
-        let rarityMultiplier = CATCH_RARITY_MULTIPLIER[fish.rarity] || 1.0;
-        
-        let fishVelocity = baseVelocity * rarityMultiplier;
+        let rarityMultiplier: number;
+
+        // Select the appropriate multiplier scale based on species rarity
+        switch (fish.rarity) {
+            case 'Rare':
+                rarityMultiplier = RARE_SPECIES_RARITY_MULTIPLIER[fish.rarity];
+                break;
+            case 'Epic':
+                rarityMultiplier = EPIC_SPECIES_RARITY_MULTIPLIER[fish.rarity];
+                break;
+            case 'Legendary':
+                rarityMultiplier = LEGENDARY_SPECIES_RARITY_MULTIPLIER[fish.rarity];
+                break;
+            default:
+                rarityMultiplier = CATCH_RARITY_MULTIPLIER[fish.rarity];
+                break;
+        }
+        console.log('Rarity multiplier:', rarityMultiplier, 'for', fish.rarity,  fish.name);
+
+        // Apply the multiplier to the base velocity
+        const velocity = baseVelocity * rarityMultiplier;
 
         // Add small value modifier with cap
         const VALUE_MULTIPLIER = 0.000002;
         const MAX_VALUE_CONTRIBUTION = 0.008;
         let valueContribution = Math.min(fish.value * VALUE_MULTIPLIER, MAX_VALUE_CONTRIBUTION);
         
-        fishVelocity += valueContribution;
+        const finalVelocity = velocity + valueContribution;
 
         // Hard cap on final velocity
         const ABSOLUTE_MAX_VELOCITY = 0.0325;
-        fishVelocity = Math.min(fishVelocity, ABSOLUTE_MAX_VELOCITY);
+        const playerLevel = this.playerStateManager.getCurrentLevel(player);
+        var levelDiscount = 1;
+        if (playerLevel > 10) {
+            levelDiscount =levelDiscount * 0.98;
+        }
+        if (playerLevel > 25) {
+            levelDiscount =levelDiscount * 0.96;
+        }
+        if (playerLevel > 30) {
+            levelDiscount =levelDiscount * 0.94;
+        }
+        const equippedBait = this.playerStateManager.getInventory(player)
+            ?.items.find(item => 
+                item.type === 'bait' && 
+                item.equipped === true
+            );
 
+        const baitResilliance = equippedBait?.metadata?.baitStats?.resilliance || 1;
+        console.log('[FISHING] Found equipped bait:', equippedBait, 'with resilliance:', baitResilliance);
+        const fishVelocity = Math.min(finalVelocity, ABSOLUTE_MAX_VELOCITY);
+        const v = fishVelocity * baitResilliance * levelDiscount; 
         console.log('Fish:', {
             name: fish.name,
             speciesRarity,
@@ -115,7 +181,9 @@ export class ReelingMovementController {
             baseVelocity,
             rarityMultiplier,
             valueContribution,
-            finalVelocity: fishVelocity
+            finalVelocity: fishVelocity,
+            baitResilliance,
+            v
         });
 
         return fishVelocity;
@@ -125,6 +193,7 @@ export class ReelingMovementController {
         // Get species rarity
         const fishType = FISH_CATALOG.find(f => f.name === fish.name.split('_')[0]);
         const speciesRarity = fishType?.rarity || 'common';
+        const fishSpecies = fish.name.split('_')[0];
 
         const BASIC_PATTERNS = [
             MovementPattern.DEFAULT,
@@ -143,17 +212,22 @@ export class ReelingMovementController {
         ];
 
         // List of fish species that should use simpler patterns
-        const SIMPLE_FISH = ['sardine', 'mackerel', 'puffer_fish', 'spotted_flounder'];
+        const SIMPLE_FISH = ['sardine', 'mackerel', 'puffer_fish', 'spotted_flounder', 'goldfish', 'cod'];
 
-        // Always use advanced patterns for rare+ species
+        // Always use basic patterns for simple fish regardless of rarity
+        if (SIMPLE_FISH.includes(fishSpecies)) {
+            const randomIndex = Math.floor(Math.random() * BASIC_PATTERNS.length);
+            return BASIC_PATTERNS[randomIndex];
+        }
+        
+        // Advanced patterns for rare+ species (that aren't simple fish)
         if (['rare', 'epic', 'legendary'].includes(speciesRarity)) {
             const randomIndex = Math.floor(Math.random() * ADV_PATTERNS.length);
             return ADV_PATTERNS[randomIndex];
         }
         
-        // Check fish rarity and species for pattern selection
-        if (fish.rarity === 'Legendary' || 
-            (fish.rarity === 'Epic' && !SIMPLE_FISH.includes(fish.name.split('_')[0]))) {
+        // Check fish weight rarity for non-simple fish
+        if (fish.rarity === 'Legendary' || fish.rarity === 'Epic') {
             const randomIndex = Math.floor(Math.random() * ADV_PATTERNS.length);
             return ADV_PATTERNS[randomIndex];
         }

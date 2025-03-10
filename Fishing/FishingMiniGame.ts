@@ -12,6 +12,7 @@ import { MessageManager } from "../MessageManager";
 import { FishSpawnManager, type CaughtFish } from "./FishSpawnManager";
 import type { GamePlayerEntity } from "../GamePlayerEntity";
 import { ReelingMovementController, MovementPattern } from './ReelingMovementController';
+import { LeaderboardManager } from "../LeaderboardManager";
 
 export interface FishingState {
     isCasting: boolean;
@@ -75,8 +76,10 @@ export class FishingMiniGame {
         const state = this.stateManager.getState(player);
         if (!state) return; 
         console.log("state swimming", state.swimming.isSwimming);
-        
-
+        if (this.stateManager.getInventory(player)?.equippedFish) {
+            console.log("Unequipping fish before casting");
+            this.inventoryManager.unequipItem(player, 'fish');
+        }
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];    
         let gamePlayerEntity = playerEntity as GamePlayerEntity;
         if (gamePlayerEntity.isInOrOnWater(playerEntity)) { return }
@@ -234,18 +237,28 @@ export class FishingMiniGame {
     }
 
     // Handle Q/E key presses
+    private CASTING_UPDATE_INTERVAL = 50; // Send updates every 50ms instead of every tick
+    private lastCastingUpdate = 0;
+
     public onTick(player: Player | null) {
         if (!player) return;
         const state = this.stateManager.getState(player);
         if (!state) return;
 
+
+
         // Handle casting power
         if (state.fishing.isCasting) {
             state.fishing.castPower += this.POWER_LOOP_SPEED;
-            player.ui.sendData({
-                type: 'castingPowerUpdate',
-                power: state.fishing.castPower
-            });
+                // Throttle UI updates
+                const now = Date.now();
+                if (now - this.lastCastingUpdate >= this.CASTING_UPDATE_INTERVAL) {
+                    player.ui.sendData({
+                        type: 'castingPowerUpdate',
+                        power: state.fishing.castPower
+                    });
+                    this.lastCastingUpdate = now;
+                }
             
             // Reset to 0 after reaching or exceeding MAX_POWER
             if (state.fishing.castPower >= this.MAX_POWER) {
@@ -451,7 +464,7 @@ class ReelingGame {
         this.inventoryManager = inventoryManager;
         this.stateManager = stateManager;
         this.messageManager = messageManager;
-        this.movementController = new ReelingMovementController();
+        this.movementController = new ReelingMovementController(stateManager);
     }
 
     startReeling(player: Player, fish: CaughtFish) {
@@ -461,16 +474,16 @@ class ReelingGame {
         let rodCheck = playerEntity.getEquippedRod(player);
         if (!rodCheck) return;
    
-        const fishVelocity = this.movementController.calculateInitialVelocity(fish, rodCheck);
+        const fishVelocity = this.movementController.calculateInitialVelocity(fish, rodCheck, player);
         this.pattern = this.movementController.getMovementPattern(fish);
         this.time = 0;
         
         state.fishing.reelingGame = {
             isReeling: true,
             fishPosition: 0.5,
-            barPosition: 0.5,
+            barPosition: 0.75,
             fishVelocity: fishVelocity,
-            progress: 25,
+            progress: 38,
             currentCatch: fish,
             // Add new properties for sinusoidal movement
             time: 0,
@@ -553,45 +566,57 @@ class ReelingGame {
         if (!state.fishing.reelingGame.currentCatch) return;
         const fishDetails = this.getFishDetails(state.fishing.reelingGame.currentCatch);
         if (fishDetails) {
-        // Add to inventory through state manager
-        this.stateManager.addInventoryItem(player, {
-            id: fish.id,
-            modelId: fishDetails.modelUri,
-            type: 'fish',
-             name: fish.name,
-            rarity: fish.rarity as ItemRarity,
-            value: fish.value,
-            quantity: 1,
-            metadata: {
-                fishStats: {
-                    weight: fish.weight,
-                    size: 0,
-                    species: fish.name
+            // Add to inventory through state manager
+            this.stateManager.addInventoryItem(player, {
+                id: fish.id,
+                modelId: fishDetails.modelUri,
+                sprite: fishDetails.sprite,
+                type: 'fish',
+                name: fish.name,
+                rarity: fish.rarity as ItemRarity,
+                value: fish.value,
+                quantity: 1,
+                metadata: {
+                    fishStats: {
+                        weight: fish.weight,
+                        size: 0,
+                        species: fish.name,
+                        isBaitFish: fish.isBaitFish
+                    }
                 }
-            }
-        });
-
-        // Calculate and grant XP
-        if (this.levelingSystem?.calculateFishXP) {
-            const xpGained = this.levelingSystem.calculateFishXP({
-                ...fish,
-                rarity: fish.rarity.toLowerCase() as "common" | "uncommon" | "rare" | "epic" | "legendary",
-                minWeight: fishDetails.minWeight
             });
-            console.log("XP gained: ", xpGained);
-            this.levelingSystem.addXP(player, xpGained);
-        }
 
-        this.messageManager.sendGameMessage(`Caught a ${fish.rarity} ${fish.name} weighing ${fish.weight}lb!`, player);
+            // Calculate and grant XP
+            if (this.levelingSystem?.calculateFishXP) {
+                const xpGained = this.levelingSystem.calculateFishXP({
+                    ...fish,
+                    rarity: fish.rarity.toLowerCase() as "common" | "uncommon" | "rare" | "epic" | "legendary",
+                    minWeight: fishDetails.minWeight
+                });
+                console.log("XP gained: ", xpGained);
+                this.levelingSystem.addXP(player, xpGained);
+            }
 
-        // Update inventory UI
-        player.ui.sendData({
-            type: 'inventoryUpdate',
-            inventory: this.inventoryManager.getInventory(player)
-        });
+            this.messageManager.sendGameMessage(`Caught a ${fish.rarity} ${fish.name} weighing ${fish.weight}lb!`, player);
 
-        // Display the caught fish
-        this.displayFish(player, fish);
+            // Record the catch in the leaderboard
+            this.recordCatchInLeaderboard(player, fish);
+
+            const equippedRod = this.inventoryManager.getEquippedRod(player);
+            console.log("Equipped rod: ", equippedRod);
+            if (equippedRod) {
+                const rodDamage = equippedRod.metadata?.rodStats?.damage ?? 1;
+                this.stateManager.applyRodDamage(player, equippedRod.id, rodDamage);
+            }
+
+            // Update inventory UI
+            player.ui.sendData({
+                type: 'inventoryUpdate',
+                inventory: this.inventoryManager.getInventory(player)
+            });
+
+            // Display the caught fish
+            this.displayFish(player, fish);
         }
     }
 
@@ -605,6 +630,17 @@ class ReelingGame {
             type: 'hideReeling'
         });
         this.messageManager.sendGameMessage("The fish got away!", player);
+            // Apply double rod damage on failure
+        const equippedRod = this.inventoryManager.getEquippedRod(player);
+        if (equippedRod) {
+            const rodDamage = equippedRod.metadata?.rodStats?.damage ?? 1;
+            this.stateManager.applyRodDamage(player, equippedRod.id, rodDamage);
+        }
+        // Update inventory UI to show the updated rod health
+        player.ui.sendData({
+            type: 'inventoryUpdate',
+            inventory: this.inventoryManager.getInventory(player)
+        });
     }
 
     private getFishDetails(caughtFish: CaughtFish) {
@@ -618,6 +654,7 @@ class ReelingGame {
         return {
             ...caughtFish,
             modelUri: fishData.modelData.modelUri,
+            sprite: fishData.modelData.sprite,
             modelScale: fishData.modelData.baseScale,
             minWeight: fishData.minWeight
             // Add any other static properties we need from the catalog
@@ -671,4 +708,40 @@ class ReelingGame {
         }, 16);
     }
 
+    // Add this new method to record catches in the leaderboard
+    private async recordCatchInLeaderboard(player: Player, fish: CaughtFish) {
+        try {
+            // Get the LeaderboardManager instance
+            const leaderboardManager = LeaderboardManager.instance;
+            
+            if (!leaderboardManager) {
+                console.error('[LEADERBOARD] LeaderboardManager instance not available');
+                return;
+            }
+
+            const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
+            
+            // Record the catch
+            const isRecord = await leaderboardManager.recordCatch(
+                player,
+                fish.name,  // species
+                fish.weight,
+                fish.value,
+                playerEntity.position ? `${playerEntity.position.x.toFixed(1)}, ${playerEntity.position.y.toFixed(1)}, ${playerEntity.position.z.toFixed(1)}` : undefined
+            );
+            
+            // If it's a record, notify the player
+            if (isRecord) {
+                this.messageManager.sendGameMessage(`New record! Your ${fish.name} is now on the leaderboard!`, player);
+                
+                // Send updated leaderboard to all players
+                const allPlayers = this.world.entityManager.getAllPlayerEntities();
+                for (const p of allPlayers) {
+                    await leaderboardManager.sendLeaderboardToPlayer(p.player, fish.name);
+                }
+            }
+        } catch (e) {
+            console.error('[LEADERBOARD] Error recording catch:', e);
+        }
+    }
 }

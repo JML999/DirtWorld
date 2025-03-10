@@ -11,7 +11,7 @@
   "dependencies": {
     "@hytopia.com/assets": "^0.2.5",
     "dotenv": "^16.4.7",
-    "hytopia": "0.1.95",
+    "hytopia": "^0.3.6",
     "openai": "^4.79.1"
   }
 }

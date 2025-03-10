@@ -1,65 +1,36 @@
-import { PlayerEntityController, Vector3 } from "hytopia";
-import type { PlayerEntity, PlayerInput, PlayerCameraOrientation, Entity, World } from "hytopia";
+import { PlayerEntityController, Vector3, Audio, ColliderShape, CoefficientCombineRule, CollisionGroup } from "hytopia";
+import type { PlayerEntity, PlayerInput, PlayerCameraOrientation, Entity, World, BlockType } from "hytopia";
 import { GamePlayerEntity } from "./GamePlayerEntity";
 import * as math from './Utils/math';
 import type { PlayerState } from "./PlayerStateManager";
 
 export class MyPlayerController extends PlayerEntityController {
     private world: World;
+    private lastBreathUpdate = 0;
+    private lastBreathPercentage = 100;
+    private BREATH_UPDATE_INTERVAL = 250; // Only update UI every 250ms
    
-
     constructor(world: World) {
         super();
         this.world = world;
+        console.log("MyPlayerController initialized");
     }
 
-    onTick = (entity: Entity, deltaTimeMs: number): void => {
+    /**
+     * Ticks the player movement for the entity controller,
+     * overriding the default implementation.
+     */
+    public tickWithPlayerInput(entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number) {
+        // Save the original input state before the parent method modifies it
+        const originalInput = { ...input };
+        
+        // First call the parent implementation to handle basic movement
+        super.tickWithPlayerInput(entity, input, cameraOrientation, deltaTimeMs);
+        
+        if (!entity.isSpawned || !entity.world) return;
+        
         const playerEntity = entity as GamePlayerEntity;
-        if (!playerEntity.world) return;
-
-        // Death check
-        if (playerEntity.position.y < 0.9) {
-            playerEntity.handleDeath();
-            return;
-        }
-
-        // Swimming check
-        if (playerEntity.isInWater(playerEntity)) {
-            playerEntity.startSwimming();
-        } else {
-            playerEntity.stopSwimming();
-        }
-
-        // Track jump input state
-        const wasJumping = playerEntity.getLastInputState()?.sp || false;
-        const isJumping = playerEntity.player.input['sp'] || false;
-        
-        // Only log when jump state changes
-        if (wasJumping !== isJumping) {
-            console.log('Jump state changed:', {
-                wasJumping,
-                isJumping,
-                isGrounded: this.isGrounded,
-                velocity: playerEntity.linearVelocity.y,
-                position: playerEntity.position.y,
-                animations: Array.from(playerEntity.modelLoopedAnimations)
-            });
-        }
-        
-        // Only allow new jumps, not held jumps
-        if (isJumping && !wasJumping) {
-            playerEntity.player.input['sp'] = true;
-        } else {
-            playerEntity.player.input['sp'] = false;
-        }
-        
-        playerEntity.updateLastInputState({ ml: playerEntity.player.input.ml, sp: playerEntity.player.input.sp });
-    }
-
-    onTickWithPlayerInput = (entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number): void => {
-        const playerEntity = entity as GamePlayerEntity;
-        if (!playerEntity.world) return;
-        const state = playerEntity.stateManager.getState(playerEntity.player);
+        const state = playerEntity.stateManager?.getState(playerEntity.player);
         if (!state) return;
 
         // Check for movement input and abort fishing if needed
@@ -73,12 +44,9 @@ export class MyPlayerController extends PlayerEntityController {
 
         const hasRodEquipped = !!playerEntity.getEquippedRod(playerEntity.player);
         
-        if (!hasRodEquipped) {
-            this.handleDigging(playerEntity, input);
-        } else {
-            this.handleFishing(playerEntity, input, state, hasRodEquipped);
-        }
-
+        // Use the original input state for digging
+        this.handleDigging(playerEntity, originalInput);
+        this.handleFishing(playerEntity, input, state, hasRodEquipped);
         this.handleMerchantInteractions(playerEntity, input, state);
 
         if (input['sp']) {
@@ -89,24 +57,107 @@ export class MyPlayerController extends PlayerEntityController {
         }
 
         // Store last input state
-        playerEntity.updateLastInputState({ ml: input.ml });
+        playerEntity.updateLastInputState({ ml: originalInput.ml });
+    }
+
+    /**
+     * Called when the controller is attached to an entity.
+     */
+    public attach(entity: Entity) {
+        // Call the parent implementation first
+        super.attach(entity);
+        console.log("MyPlayerController attached to entity");
+    }
+
+    /**
+     * Called when the controlled entity is spawned.
+     */
+    public spawn(entity: Entity) {
+        // Call the parent implementation first
+        super.spawn(entity);
+        console.log("MyPlayerController entity spawned");
+    }
+
+    /**
+     * Called every frame for the entity.
+     */
+    public tick(entity: Entity, deltaTimeMs: number) {
+        // Call the parent implementation first
+        super.tick(entity, deltaTimeMs);
+        
+        if (!entity.isSpawned || !entity.world) return;
+        
+        
+        const playerEntity = entity as GamePlayerEntity;
+        if (!playerEntity.world) return;
+
+        // Death check
+        if (playerEntity.position.y < 0.9) {
+            playerEntity.handleDeath();
+            return;
+        }
+        
+        // Swimming and breath check - check multiple points around player
+        const isInWaterZone = this.checkWaterZone(playerEntity);
+        
+        if (isInWaterZone) {
+            if (!playerEntity.isSwimming) {
+                playerEntity.startSwimming();
+            }
+            playerEntity.updateBreath(deltaTimeMs);
+        } else {
+            if (playerEntity.isSwimming) {
+                playerEntity.stopSwimming();
+            }
+            if (!playerEntity.isFishing) {
+                playerEntity.updateBreath(deltaTimeMs);
+            }
+        }
+
+        // Only send breath updates when needed
+        const currentBreath = playerEntity.getCurrentBreathPercentage();
+        const timeSinceLastUpdate = Date.now() - this.lastBreathUpdate;
+        
+        // Update UI only if:
+        // 1. It's been at least BREATH_UPDATE_INTERVAL ms since last update, AND
+        // 2. The breath percentage has changed by at least 1%
+        if (timeSinceLastUpdate >= this.BREATH_UPDATE_INTERVAL && 
+            Math.abs(currentBreath - this.lastBreathPercentage) >= 1) {
+            
+            playerEntity.sendBreathUpdate(currentBreath);
+            this.lastBreathUpdate = Date.now();
+            this.lastBreathPercentage = currentBreath;
+        }
+        
+        
+        playerEntity.updateLastInputState({ 
+            ml: playerEntity.player.input.ml,
+            mr: playerEntity.player.input.mr,  // Add mr tracking
+            sp: playerEntity.player.input.sp 
+        });
     }
 
     private handleDigging(playerEntity: GamePlayerEntity, input: PlayerInput): void {
         if (!input.ml) return;
-        const aimResult = this.calculateAimDirection(playerEntity, 1.1);
-        if (!aimResult) return;
+        const aimResult = this.calculateAimDirection(playerEntity, 3.0); // Increase range to 3.0
+        if (!aimResult) {
+            console.log("No aim result calculated");
+            return;
+        }
+    
 
         const raycastResult = this.world.simulation.raycast(
             aimResult.origin,
             aimResult.direction,
-            1.1,
+            3.0, // Increase range to 3.0
             { filterExcludeRigidBody: playerEntity.rawRigidBody }
         );
 
         if (raycastResult?.hitEntity) {
             const hitPoint = new Vector3(raycastResult.hitPoint.x, raycastResult.hitPoint.y, raycastResult.hitPoint.z);
             playerEntity.handleBlockHit(raycastResult.hitEntity.id?.toString() || '', hitPoint, playerEntity.player);
+        } else {
+            console.log("No entity hit by raycast");
         }
     }
 
@@ -119,7 +170,7 @@ export class MyPlayerController extends PlayerEntityController {
         if (!hasRodEquipped) return;
         // Handle casting start
         if (this.shouldStartCasting(input, state)) {
-            input.ml = false;
+            input.mr = false;
             playerEntity.handleFishing();
         }
         // Restrict movement while fishing
@@ -131,8 +182,8 @@ export class MyPlayerController extends PlayerEntityController {
     }
     
     private shouldStartCasting(input: PlayerInput, state: PlayerState): boolean {
-        if (!input.ml) return false;
-        if (state.fishing.lastInputState?.ml) return false;
+        if (!input.mr) return false;
+        if (state.fishing.lastInputState?.mr) return false;
         if (state.fishing.isPlayerFishing) return false;
         if (state.fishing.reelingGame?.isReeling) return false;
         if (state.fishing.lastInputState?.ml) return false; 
@@ -249,5 +300,32 @@ export class MyPlayerController extends PlayerEntityController {
         );
 
         return { origin, direction };
+    }
+
+    private checkWaterZone(playerEntity: GamePlayerEntity): boolean {
+        // Check multiple points around the player's head
+        const checkPoints = [
+            { x: 0, y: 0.3, z: 0 },    // Center
+            { x: 0.2, y: 0.3, z: 0 },  // Right
+            { x: -0.2, y: 0.3, z: 0 }, // Left
+            { x: 0, y: 0.3, z: 0.2 },  // Front
+            { x: 0, y: 0.3, z: -0.2 }  // Back
+        ];
+
+        // Count how many points are in water
+        let waterPoints = 0;
+        for (const offset of checkPoints) {
+            const pos = {
+                x: playerEntity.position.x + offset.x,
+                y: playerEntity.position.y + offset.y,
+                z: playerEntity.position.z + offset.z
+            };
+            if (playerEntity.isWaterBlock(pos)) {
+                waterPoints++;
+            }
+        }
+
+        // Consider in water if majority of points are in water
+        return waterPoints >= 3;
     }
 }

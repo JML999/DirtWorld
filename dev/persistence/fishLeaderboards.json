@@ -1,0 +1,132 @@
+{
+  "Sardine": {
+    "byWeight": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.66,
+        "value": 139,
+        "timestamp": 1741629988113,
+        "location": "8.7, 5.7, 21.5"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.58,
+        "value": 137,
+        "timestamp": 1741633106650,
+        "location": "8.5, 5.7, 21.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.53,
+        "value": 135,
+        "timestamp": 1741635702841,
+        "location": "7.7, 5.7, 22.9"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.66,
+        "value": 139,
+        "timestamp": 1741629988113,
+        "location": "8.7, 5.7, 21.5"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.58,
+        "value": 137,
+        "timestamp": 1741633106650,
+        "location": "8.5, 5.7, 21.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.53,
+        "value": 135,
+        "timestamp": 1741635702841,
+        "location": "7.7, 5.7, 22.9"
+      }
+    ]
+  },
+  "Mackerel": {
+    "byWeight": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.74,
+        "value": 142,
+        "timestamp": 1741630519134,
+        "location": "7.5, 5.7, 22.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.68,
+        "value": 140,
+        "timestamp": 1741630613875,
+        "location": "7.6, 5.7, 22.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.45,
+        "value": 133,
+        "timestamp": 1741633305633,
+        "location": "13.3, 5.7, -10.4"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.74,
+        "value": 142,
+        "timestamp": 1741630519134,
+        "location": "7.5, 5.7, 22.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.68,
+        "value": 140,
+        "timestamp": 1741630613875,
+        "location": "7.6, 5.7, 22.7"
+      },
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.45,
+        "value": 133,
+        "timestamp": 1741633305633,
+        "location": "13.3, 5.7, -10.4"
+      }
+    ]
+  },
+  "Cod": {
+    "byWeight": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.97,
+        "value": 41,
+        "timestamp": 1741633366315,
+        "location": "-2.2, 5.7, 31.4"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-1",
+        "playerId": "player-1",
+        "weight": 4.97,
+        "value": 41,
+        "timestamp": 1741633366315,
+        "location": "-2.2, 5.7, 31.4"
+      }
+    ]
+  }
+}

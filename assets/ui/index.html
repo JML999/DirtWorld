@@ -35,7 +35,11 @@
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/JigPanel.js'),
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/ReelPanel.js'),
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/MerchantPanel.js'),
-                loadScript('{{CDN_ASSETS_URL}}/ui/panels/RodShopPanel.js')
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/RodShopPanel.js'),
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/TutorialPanel.js'),
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/BreathPanel.js'),
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/CraftingPanel.js'),
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/LeaderboardPanel.js'),
             ]);
             
             window.GameUpdatesPanel.initialize('updates-container');
@@ -46,6 +50,10 @@
             window.ReelPanel.initialize('reel-container');
             window.MerchantPanel.initialize('merchant-container');
             window.RodShopPanel.initialize('shop-container');
+            window.TutorialPanel.initialize('tutorial-container');
+            window.BreathPanel.initialize('breath-container');
+            window.CraftingPanel.initialize('crafting-container');
+            window.LeaderboardPanel.initialize('leaderboard-container');
 
             console.log('UI initialization complete');
             hytopia.sendData({
@@ -60,13 +68,20 @@
     <!-- Container for game updates in top right -->
     <div id="updates-container" style="position: fixed; top: 20px; right: 20px; min-width: 200px; min-height: 100px; z-index: 1000;"></div>
     
+    <!-- Container for breath meter -->
+    <div id="breath-container"></div>
+    
     <!-- Container for progress UI in bottom right -->
     <div id="progress-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;"></div>
     <div id="inventory-container"></div>
+    
     <div id="casting-container"></div>
     <div id="jig-container"></div>
     <div id="reel-container"></div>
     <div id="merchant-container"></div>
     <div id="shop-container"></div>
+    <div id="tutorial-container"></div>
+    <div id="crafting-container"></div>
+    <div id="leaderboard-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000;"></div>
 </body>
 </html>

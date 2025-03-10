@@ -1,6 +1,8 @@
 import { Player, World, Entity } from 'hytopia';
 import type { InventoryItem, PlayerInventory } from './Inventory';
 import { FISHING_RODS } from './RodCatalog';
+import { PlayerStateManager } from '../PlayerStateManager';
+import { FISH_CATALOG } from '../Fishing/FishCatalog';
 
 export class InventoryManager {
     private world: World;
@@ -9,7 +11,7 @@ export class InventoryManager {
     private equippedFishEntities: Map<string, Entity> = new Map();
     private currentRodEntity: Map<string, Entity> = new Map();
     private rodOperationInProgress: Map<string, boolean> = new Map(); // Track ongoing operations
-    private rodOperationTimeout: Map<string, ReturnType<typeof setTimeout>> = new Map(); // Track timeouts
+    private rodOperationTimeout: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
     constructor(world: World) {
         this.world = world;
@@ -36,22 +38,31 @@ export class InventoryManager {
     }
 
     addItem(player: Player, item: InventoryItem): boolean {
+        console.log(`[Server] Adding item to inventory: ${item.id}, type: ${item.type}`);
+        
         const inventory = this.inventories.get(player.id);
-        if (!inventory) return false;
+        if (!inventory) {
+            console.error(`[Server] No inventory found for player ${player.id}`);
+            return false;
+        }
 
         if (inventory.items.length >= inventory.maxSlots) {
+            console.log(`[Server] Inventory full for player ${player.id}`);
             return false; // Inventory full
         }
 
         // Check for existing item stack
         const existingItem = inventory.items.find(i => i.id === item.id);
-        if (existingItem ) {
+        if (existingItem) {
+            console.log(`[Server] Increasing quantity of existing item: ${item.id}`);
             existingItem.quantity += item.quantity;
         } else {
+            console.log(`[Server] Adding new item: ${item.id}`);
             inventory.items.push(item);
         }
 
         this.updateInventoryUI(player);
+        console.log(`[Server] Inventory updated, new count: ${inventory.items.length}`);
         return true;
     }
 
@@ -116,19 +127,31 @@ export class InventoryManager {
 
         const item = inventory.items.find(i => i.id === itemId);
         if (!item) return false;
+        console.log("equipping item", item);
+
 
         // If clicking an already equipped fish, unequip it
         if (item.type === 'fish' && item.equipped) {
+            console.log("unequipping fish", item.id, item.type);
             this.unequipItem(player, item.type);
             inventory.equippedFish = undefined;
             const entity = this.equippedFishEntities.get(player.id);
             if (entity) {
+                console.log("despawning fish", entity);
                 entity.despawn();
                 this.equippedFishEntities.delete(player.id);
             }
             item.equipped = false;
             this.updateInventoryUI(player);
             return true;
+        }
+
+        if (item.type === 'fish' ) {
+            const fishEntity = this.equippedFishEntities.get(player.id);
+            if (fishEntity) {
+                fishEntity.despawn();
+                this.equippedFishEntities.delete(player.id);
+            }
         }
 
         // Unequip any currently equipped items of the same type
@@ -169,7 +192,7 @@ export class InventoryManager {
         this.hookBait(player, item.id);
     }
 
-    async equipRod(player: Player, item: InventoryItem): Promise<boolean> {
+    private async equipRod(player: Player, item: InventoryItem): Promise<boolean> {
         // Prevent concurrent rod operations
         if (this.rodOperationInProgress.get(player.id)) {
             console.log('Rod operation already in progress, skipping');
@@ -205,7 +228,7 @@ export class InventoryManager {
 
             const rotation = item.metadata.rodStats?.custom 
                 ? { x: 0, y: 0, z: 0, w: 1 }
-                : { x: -0.7071068, y: 0, z: 0, w: 0.7071068 };
+                : { x: -0.3826834, y: 0, z: 0, w: 0.9238795 }; // ~45 degrees instead of ~90
 
             await rodEntity.spawn(this.world, { x: 0, y: 0, z: 0 }, rotation);
             
@@ -213,7 +236,7 @@ export class InventoryManager {
             const timeout = setTimeout(() => {
                 this.rodOperationInProgress.set(player.id, false);
                 this.rodOperationTimeout.delete(player.id);
-            }, 500); // 500ms safety buffer
+            }, 1000); // 500ms safety buffer
 
             this.rodOperationTimeout.set(player.id, timeout);
             this.currentRodEntity.set(player.id, rodEntity);
@@ -251,17 +274,8 @@ export class InventoryManager {
     hookBait(player: Player, itemId: string): boolean {
         const inventory = this.inventories.get(player.id);
         if (!inventory) return false;
-
-        for (const item of inventory.items) {
-            if (item.metadata.fishStats?.baited) {
-               item.metadata.fishStats.baited = false;
-            }
-        }
         const item = inventory.items.find(i => i.id === itemId);
         if (!item || !item.metadata.fishStats) return false;
-
-        item.metadata.fishStats.baited = true;
-
         this.updateInventoryUI(player);
         return true;
     }
@@ -280,16 +294,31 @@ export class InventoryManager {
     displayFish(player: Player, item: InventoryItem): Entity {
         const playerEntity = this.world.entityManager.getPlayerEntitiesByPlayer(player)[0];
         // Create display entity
-        const displayEntity = new Entity({
+        const defaultEntity = new Entity({
             name: 'displayFish',
             modelUri: item.modelId,
             modelScale: 1,
             modelLoopedAnimations: ['swim'],
             parent: playerEntity,
         });
+        const fishData = FISH_CATALOG.find(f => f.name === item.name);
+        if (!fishData) {return defaultEntity};
+        if (!item.metadata?.fishStats || !fishData) {return defaultEntity};
+        // Calculate display scale
+        const weightRatio = (item.metadata.fishStats.weight - fishData.minWeight) / (fishData.maxWeight - fishData.minWeight);
+        const scaleMultiplier = fishData.modelData.baseScale + 
+            (weightRatio * (fishData.modelData.maxScale - fishData.modelData.baseScale));
+        const displayEntity = new Entity({
+            name: 'displayFish',
+            modelUri: item.modelId,
+            modelScale: scaleMultiplier,
+            modelLoopedAnimations: ['swim'],
+            parent: playerEntity,
+        });
         
         displayEntity.spawn(this.world, { x: 0, y: 2.2, z: 0 });
         displayEntity.setAngularVelocity({ x: 0, y: Math.PI / 1.5, z: 0 });
+        this.equippedFishEntities.set(player.id, displayEntity);
         return displayEntity;
     }
 
@@ -326,6 +355,7 @@ export class InventoryManager {
                 if (fishEntity) {
                     fishEntity.despawn();
                     this.equippedFishEntities.delete(player.id);
+                    
                 }
             }
 
@@ -374,4 +404,125 @@ export class InventoryManager {
         const rodEntity = this.currentRodEntity.get(player.id);
         return !!(rodEntity?.id && this.world.entityManager.getEntity(rodEntity.id));
     }
+
+    public hasItem(player: Player, itemId: string): boolean {
+        const inventory = this.getInventory(player);
+        if (!inventory) return false;
+        return inventory.items.some(item => item.id === itemId && item.quantity > 0);
+    }
+
+    /**
+     * Apply damage to a fishing rod
+     * @param player The player who owns the rod
+     * @param rodId The ID of the rod to damage
+     * @param damageAmount Amount of damage to apply (defaults to rod's damage stat)
+     * @returns true if successful, false otherwise
+     */
+    applyRodDamage(player: Player, rodId: string, damageAmount?: number, playerStateManager?: PlayerStateManager): boolean {
+        const inventory = this.inventories.get(player.id);
+        if (!inventory) return false;
+
+        const rod = inventory.items.find(item => item.id === rodId && item.type === 'rod');
+        if (!rod) return false;
+
+        // Get rod stats
+        const rodStats = rod.metadata?.rodStats;
+        if (!rodStats) return false;
+
+        // Initialize health if not present
+        if (rodStats.health === undefined) {
+            rodStats.health = 100; // Default health
+        }
+
+        // Use rod's own damage stat if no amount specified
+        const damage = damageAmount ?? rodStats.damage ?? 1;
+        
+        // Apply damage
+        rodStats.health = Math.max(0, rodStats.health - damage);
+        
+        // Check if rod is broken
+        if (rodStats.health <= 0) {
+            // Rod is broken - remove it from inventory
+            this.unequipItem(player, 'rod');
+            this.removeItem(player, rodId);
+            
+            // Notify player
+            player.ui.sendData({
+                type: 'gameMessage',
+                message: `Your ${rod.name} has broken!`
+            });
+            
+            return true;
+        }
+        
+        // Update UI if health is low
+        if (rodStats.health <= 20) {
+            playerStateManager?.sendGameMessage(player, `Your ${rod.name} is badly damaged (${rodStats.health}% health remaining)!`);
+        } else if (rodStats.health <= 50) {
+            playerStateManager?.sendGameMessage(player, `Your ${rod.name} is showing signs of wear (${rodStats.health}% health remaining).`);
+        }
+        
+        // Update inventory UI
+        this.updateInventoryUI(player);
+        
+        return true;
+    }
+
+    loadInventory(player: Player, inventory: any) {
+        console.log(`[INVENTORY] Loading inventory for player ${player.id}`);
+        
+        // Log the incoming inventory data
+        console.log(`[INVENTORY] Raw inventory data:`, JSON.stringify(inventory, null, 2));
+        
+        // Check if inventory has the expected structure
+        if (!inventory.items) {
+            console.warn(`[INVENTORY] Missing items array in inventory data`);
+            inventory.items = [];
+        }
+        
+        if (!inventory.equippedItems) {
+            console.warn(`[INVENTORY] Missing equippedItems object in inventory data`);
+            inventory.equippedItems = {};
+        }
+        
+        // Create a deep copy to avoid reference issues
+        const playerInventory: PlayerInventory = {
+            items: JSON.parse(JSON.stringify(inventory.items)),
+            maxSlots: 20,
+            equippedBait: inventory.equippedBait ? JSON.parse(JSON.stringify(inventory.equippedBait)) : undefined,
+            equippedFish: inventory.equippedFish ? JSON.parse(JSON.stringify(inventory.equippedFish)) : undefined,
+            equippedRod: inventory.equippedRod ? JSON.parse(JSON.stringify(inventory.equippedRod)) : undefined
+        };
+        
+        // Set the player's inventory in the map
+        this.inventories.set(player.id, playerInventory);
+        
+        // Log the inventory after setting
+        console.log(`[INVENTORY] Inventory map after loading:`, 
+            JSON.stringify({
+                itemCount: playerInventory.items.length,
+                itemIds: playerInventory.items.map(i => i.id),
+                equippedBait: playerInventory.equippedBait,
+                equippedFish: playerInventory.equippedFish,
+                equippedRod: playerInventory.equippedRod
+            }, null, 2));
+        
+        // Re-equip items if they were equipped
+        if (inventory.equippedItems) {
+            Object.entries(inventory.equippedItems).forEach(([_, itemId]) => {
+                if (itemId) {
+                    const item = inventory.items.find((i: InventoryItem) => i.id === itemId);
+                    if (item) {
+                        console.log(`[INVENTORY] Re-equipping item: ${item.id}`);
+                        this.equipItem(player, item.id);
+                    }
+                }
+            });
+        }
+        
+        // Update UI
+        this.updateInventoryUI(player);
+        console.log(`[INVENTORY] UI updated for player ${player.id}`);
+    }
+
 }

@@ -43,13 +43,13 @@ export const LOCAL_ZONES: FishingZone[] = [
         radius: 4,
         depth: 1,
         difficulty: 'beginner',
-        restrictedTo: ['mackerel']
+        restrictedTo: ['goldfish', 'orange_koi', 'red_koi', 'red_and_white_koi', 'red_marbled_koi', 'orange_marbled_koi', 'tricolor_koi']
     },
     {
         id: 'moon_beach',
         name: 'Moon Beach',
         position: new Vector3(-18, 3, -18),
-        radius: 10,
+        radius: 12,
         depth: 2,
         difficulty: 'medium',
         restrictedTo: []
@@ -116,7 +116,7 @@ export const LOCAL_ZONES: FishingZone[] = [
         radius: 2,
         depth: 1,
         difficulty: 'medium',
-        restrictedTo: []
+        restrictedTo: ['goldfish', 'orange_koi', 'red_koi', 'red_and_white_koi', 'red_marbled_koi', 'orange_marbled_koi', 'tricolor_koi']
     },
 
 ];

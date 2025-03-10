@@ -8,8 +8,6 @@ import { type BaitDefinition, BAIT_CATALOG } from './BaitCatalog';
 import type { InventoryItem } from "../Inventory/Inventory";
 import mapData from '../assets/maps/map_test.json';
 
-
-
 interface ZoneSpawnState {
     activeBlocks: number;
     coordinates: Vector3[];
@@ -17,18 +15,20 @@ interface ZoneSpawnState {
     crateType: string;
 }
 
-class CrateBlock {
+class BaitBlock {
+    public readonly spawnTime: number;
     constructor(
         public health: number,
         public readonly entity: Entity,
         public readonly crateType: string,
         public readonly definition: CrateDefinition
-    ) {}
+    ) {
+        this.spawnTime = Date.now();
+    }
 }
 
-
 export class BaitBlockManager {
-    private baitBlocks: Map<string, CrateBlock> = new Map();
+    private baitBlocks: Map<string, BaitBlock> = new Map();
     private zoneStates: Map<string, ZoneSpawnState> = new Map();
     private maxBlocksPerZone = 1;
     private world: World;
@@ -39,6 +39,7 @@ export class BaitBlockManager {
         this.stateManager = stateManager;
         this.initializeZoneStates();
         this.spawnInitialBlocks();
+        this.logBlockDistribution();
         console.log('bait blocks');
         console.log(this.baitBlocks.size);
     }
@@ -52,7 +53,6 @@ export class BaitBlockManager {
                 console.log(`Initializing zone states for spawn zone: ${spawnZone.id}`);
                 // Initialize each spawn zone
                 spawnZone.coordinates.forEach(coord => {
-                    console.log(`Initializing zone states for coordinate: ${coord.x}, ${coord.y}, ${coord.z}`);
                     const zoneKey = `${spawnZone.id}_${coord.x}_${coord.y}_${coord.z}`;
                     this.zoneStates.set(zoneKey, {
                         activeBlocks: 0,
@@ -66,25 +66,50 @@ export class BaitBlockManager {
     }
 
     private spawnInitialBlocks() {
-        // Get unique zone IDs (like 'beginner_pond_spawns', 'moon_beach_spawns', etc.)
-        const uniqueZones = new Set(
-            Array.from(this.zoneStates.keys()).map(key => key.split('_')[0])
-        );
-
-        // Spawn one block per unique zone
-        uniqueZones.forEach(zoneId => {
-            console.log(`Spawning initial block for zone: ${zoneId}`);
-            // Get all possible spawn points for this zone
-            const zoneSpawnPoints = Array.from(this.zoneStates.entries())
-                .filter(([key]) => key.startsWith(zoneId));
+        console.log("Spawning initial blocks with simplified approach");
+        
+        // 1. Get all dirt block spawn points
+        const dirtSpawnPoints = Array.from(this.zoneStates.entries())
+            .filter(([_, state]) => state.crateType === 'dirt_block');
+        
+        // 2. Get all crate spawn points
+        const crateSpawnPoints = Array.from(this.zoneStates.entries())
+            .filter(([_, state]) => state.crateType === 'beginner_crate');
+        
+        console.log(`Found ${dirtSpawnPoints.length} dirt spawn points and ${crateSpawnPoints.length} crate spawn points`);
+        
+        // 3. Spawn 5 dirt blocks at random locations
+        if (dirtSpawnPoints.length > 0) {
+            // Shuffle the array
+            const shuffledDirtPoints = [...dirtSpawnPoints].sort(() => Math.random() - 0.5);
             
-            if (zoneSpawnPoints.length > 0) {
-                // Pick random spawn point from this zone
-                const randomIndex = Math.floor(Math.random() * zoneSpawnPoints.length);
-                const [zoneKey] = zoneSpawnPoints[randomIndex];
+            // Take the first 5 (or fewer if not enough points)
+            const dirtBlocksToSpawn = Math.min(5, shuffledDirtPoints.length);
+            console.log(`Spawning ${dirtBlocksToSpawn} dirt blocks`);
+            
+            for (let i = 0; i < dirtBlocksToSpawn; i++) {
+                const [zoneKey, _] = shuffledDirtPoints[i];
                 this.spawnBlockInZone(zoneKey);
             }
-        });
+        }
+        
+        // 4. Spawn 2 crate blocks at random locations
+        if (crateSpawnPoints.length > 0) {
+            // Shuffle the array
+            const shuffledCratePoints = [...crateSpawnPoints].sort(() => Math.random() - 0.5);
+            
+            // Take the first 2 (or fewer if not enough points)
+            const crateBlocksToSpawn = Math.min(2, shuffledCratePoints.length);
+            console.log(`Spawning ${crateBlocksToSpawn} crate blocks`);
+            
+            for (let i = 0; i < crateBlocksToSpawn; i++) {
+                const [zoneKey, _] = shuffledCratePoints[i];
+                this.spawnBlockInZone(zoneKey);
+            }
+        }
+        
+        console.log(`Initial spawning complete. Total blocks: ${this.baitBlocks.size}`);
+        this.logBlockDistribution();
     }
 
     private spawnBlockInZone(zoneKey: string): boolean {
@@ -96,8 +121,10 @@ export class BaitBlockManager {
         const position = zoneState.coordinates[0];
         console.log(`Spawning crate at position: ${position.x}, ${position.y}, ${position.z}`);
         
-        const block = this.createCrateBlock(position, zoneState.crateType);
-        block.entity.onTick = () => {
+        const block = this.createBaitBlock(position, zoneState.crateType);
+        
+        // Update to use the new event system
+        block.entity.on('tick', () => {
             if (block.entity.position.y < 0) {  // Simple y check is very cheap
                 console.log(`Block fell below y=0, removing: ${block.entity.position.y}`);
                 const id = block.entity.id?.toString();
@@ -106,7 +133,8 @@ export class BaitBlockManager {
                     console.log('block removed', id);
                 }
             }
-        }
+        });
+        
         if (block.entity.id) {
             this.baitBlocks.set(block.entity.id.toString(), block);
             zoneState.activeBlocks++;
@@ -154,15 +182,18 @@ export class BaitBlockManager {
     }
 
     private spawnInRandomZone(): boolean {
-        // Convert zones to array and shuffle
+        // 70% chance to spawn dirt block, 30% chance for crate
+        const spawnDirt = Math.random() < 0.9;
+        
+        // Filter zones based on type
         const availableZones = Array.from(this.zoneStates.entries())
-            .filter(([_, state]) => {
-                const fillPercentage = state.activeBlocks / this.maxBlocksPerZone;
-                return fillPercentage < 1;  // Only include zones that aren't full
+            .filter(([key, state]) => {
+                const isDirtZone = key.includes('dirt');
+                const notFull = state.activeBlocks < this.maxBlocksPerZone;
+                return notFull && (spawnDirt ? isDirtZone : !isDirtZone);
             })
-            .sort(() => Math.random() - 0.5);  // Shuffle the zones
+            .sort(() => Math.random() - 0.5);
 
-        // Try to spawn in first available zone from shuffled list
         if (availableZones.length > 0) {
             const [zoneId, _] = availableZones[0];
             return this.spawnBlockInZone(zoneId);
@@ -176,7 +207,7 @@ export class BaitBlockManager {
         return new Vector3(x, y, z);
     }
 
-    private createCrateBlock(position: Vector3, crateType: string): CrateBlock {
+    private createBaitBlock(position: Vector3, crateType: string): BaitBlock {
         const definition = CRATE_CATALOG[crateType];
         const entity = new Entity({
             blockTextureUri: definition.blockTextureUri,
@@ -189,7 +220,7 @@ export class BaitBlockManager {
         entity.spawn(this.world, position);
         console.log(`Bait block spawned at ${position}`);
 
-        return new CrateBlock(definition.health, entity, crateType, definition);
+        return new BaitBlock(definition.health, entity, crateType, definition);
     }
 
     private removeBaitBlock(id: string) {
@@ -201,6 +232,7 @@ export class BaitBlockManager {
     }
 
     public handleBlockHit(entityId: string, hitPosition: Vector3, player: Player): void {
+        console.log('handleBlockHit', entityId);
         const block = this.baitBlocks.get(entityId);
         if (!block) return;
 
@@ -227,7 +259,7 @@ export class BaitBlockManager {
             const MAX_SPAWN_ATTEMPTS = 20; // Prevent infinite loops
             let attempts = 0;
             
-            while (this.baitBlocks.size < 7 && attempts < MAX_SPAWN_ATTEMPTS) {
+            while (this.baitBlocks.size < 4 && attempts < MAX_SPAWN_ATTEMPTS) {
                 console.log(`Adding block to reach target count. Current: ${this.baitBlocks.size}, Attempt: ${attempts + 1}`);
                 const success = this.spawnInRandomZone();
                 if (!success) {
@@ -236,6 +268,7 @@ export class BaitBlockManager {
                     attempts = 0;
                 }
             }
+             this.logBlockDistribution();
 
             if (attempts >= MAX_SPAWN_ATTEMPTS) {
                 console.warn('Failed to spawn all bait blocks after maximum attempts');
@@ -262,6 +295,7 @@ export class BaitBlockManager {
         }
         console.log('bait blocks after checkInvalidBlocks');
         console.log(this.baitBlocks.size);
+        this.logBlockDistribution();
     }
 
     private isInWater(entity: any): boolean {
@@ -331,7 +365,7 @@ export class BaitBlockManager {
         }
     }
 
-    private handleBreak(crateBlock: CrateBlock, player: Player) {
+    private handleBreak(crateBlock: BaitBlock, player: Player) {
         const loot = this.rollLoot(crateBlock.definition.lootTable);
         if (loot) {
             this.giveBaitToPlayer(player, loot.type, loot.amount);
@@ -363,6 +397,7 @@ export class BaitBlockManager {
         return {
             id: baitDef.id,
             modelId: baitDef.modelId,
+            sprite: baitDef.sprite,
             name: baitDef.name,
             type: 'bait',
             rarity: baitDef.rarity,
@@ -371,8 +406,12 @@ export class BaitBlockManager {
             metadata: {
                 baitStats: {
                     baseLuck: baitDef.baseLuck,
+                    class: baitDef.class,
                     targetSpecies: baitDef.targetSpecies,
-                    speciesLuck: baitDef.speciesLuck
+                    speciesLuck: baitDef.speciesLuck,
+                    description: baitDef.description,
+                    resilliance: baitDef.resilliance,
+                    strength: baitDef.strength
                 }
             }
         };
@@ -383,6 +422,7 @@ export class BaitBlockManager {
         if (baitDef) {
             const baitItem = this.createBaitInventoryItem(baitDef, amount);
             this.stateManager.addInventoryItem(player, baitItem);
+            this.stateManager.sendGameMessage(player, `${amount} ${baitDef.name} added to inventory`);
         }
     }
 
@@ -397,5 +437,64 @@ export class BaitBlockManager {
         }
         this.removeBaitBlock(blockId);
         this.checkInvalidBlocks();
+    }
+
+    private logBlockDistribution() {
+        let dirtCount = 0;
+        let crateCount = 0;
+        
+        this.baitBlocks.forEach(block => {
+            if (block.crateType.includes('dirt')) {
+                dirtCount++;
+            } else {
+                crateCount++;
+            }
+        });
+
+        const totalBlocks = this.baitBlocks.size;
+        const dirtPercentage = (dirtCount / totalBlocks * 100).toFixed(1);
+        const cratePercentage = (crateCount / totalBlocks * 100).toFixed(1);
+
+        console.log(`
+                Block Distribution:
+                Total Blocks: ${totalBlocks}/7
+                Dirt Blocks: ${dirtCount} (${dirtPercentage}%)
+                Crate Blocks: ${crateCount} (${cratePercentage}%)
+        `);
+    }
+
+    public cleanupOldBlocks() {
+        const TWELVE_HOURS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+        const currentTime = Date.now();
+        let replacementsNeeded = 0;
+    
+        // Iterate over all bait blocks
+        for (const [id, block] of this.baitBlocks) {
+            if (currentTime - block.spawnTime > TWELVE_HOURS) {
+                console.log(`Cleaning up old bait block ${id}, age: ${(currentTime - block.spawnTime) / 1000 / 60 / 60} hours`);
+                
+                // Find the zone this block was in
+                const zoneId = this.findZoneForBlock(id);
+                if (zoneId) {
+                    const zoneState = this.zoneStates.get(zoneId);
+                    if (zoneState) {
+                        zoneState.activeBlocks--;
+                    }
+                }
+    
+                // Remove the old block
+                this.removeBaitBlock(id);
+                replacementsNeeded++;
+            }
+        }
+    
+        // Spawn new blocks to replace the old ones
+        if (replacementsNeeded > 0) {
+            console.log(`Spawning ${replacementsNeeded} new blocks to replace old ones`);
+            for (let i = 0; i < replacementsNeeded; i++) {
+                this.spawnInRandomZone();
+            }
+            this.logBlockDistribution();
+        }
     }
 }

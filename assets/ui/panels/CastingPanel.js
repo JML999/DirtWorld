@@ -61,8 +61,10 @@ class CastingPanel {
             marker.style.display = 'none';
         }
     }
+
 }
 
 // Make it globally available
 window.CastingPanel = new CastingPanel();
 console.log('CastingPanel global object created');
+
