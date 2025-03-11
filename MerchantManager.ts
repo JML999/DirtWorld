@@ -380,7 +380,7 @@ export class MerchantManager {
                 case 2: // Tell me about Bait Crafting
                     player.ui.sendData({
                         type: 'merchantSpeak',
-                        message: "Combining your catch with loot like seaweed is a great way to make new types of bait. Feel free to use our sushi crafting block to create your own!"
+                        message: "Combining your catch and loot with seaweed is a great way to make new types of bait. Feel free to use our sushi crafting block to create your own!"
                     });
                     break;
                 case 3: // Second option - decline
