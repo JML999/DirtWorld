@@ -177,10 +177,7 @@ class TutorialPanel {
         
         // Add keyboard shortcuts
         document.addEventListener('keydown', (event) => {
-            if (event.key.toLowerCase() === 'h') {
-                console.log("[TUTORIAL] H key pressed");
-                this.showTutorial();
-            } else if (event.key === 'Escape' && this.tutorialOpen) {
+            if (event.key === 'Escape' && this.tutorialOpen) {
                 this.closeTutorial();
             }
         });

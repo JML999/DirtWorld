@@ -9,7 +9,7 @@
         "type": "rod",
         "rarity": "common",
         "value": 0,
-        "quantity": 3,
+        "quantity": 5,
         "metadata": {
           "rodStats": {
             "rarityBonus": 0,
@@ -62,7 +62,7 @@
       {
         "id": "Seaweed",
         "name": "Seaweed",
-        "quantity": 2,
+        "quantity": 1,
         "value": 1,
         "sprite": "seaweed_sprite.png",
         "rarity": "common",
@@ -92,7 +92,7 @@
       {
         "id": "bait_bug_roll",
         "name": "Bug Roll",
-        "quantity": 1,
+        "quantity": 2,
         "value": 12,
         "sprite": "bug_roll.png",
         "modelId": "bait/bug_roll",
@@ -118,7 +118,7 @@
         "type": "bait",
         "rarity": "common",
         "value": 5,
-        "quantity": 2,
+        "quantity": 7,
         "metadata": {
           "baitStats": {
             "baseLuck": 1.2,

@@ -72,12 +72,12 @@
         "location": "7.6, 5.7, 22.7"
       },
       {
-        "playerName": "player-1",
-        "playerId": "player-1",
-        "weight": 4.45,
-        "value": 133,
-        "timestamp": 1741633305633,
-        "location": "13.3, 5.7, -10.4"
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.64,
+        "value": 139,
+        "timestamp": 1741662505915,
+        "location": "-1.6, 5.7, 31.5"
       }
     ],
     "byValue": [
@@ -98,17 +98,25 @@
         "location": "7.6, 5.7, 22.7"
       },
       {
-        "playerName": "player-1",
-        "playerId": "player-1",
-        "weight": 4.45,
-        "value": 133,
-        "timestamp": 1741633305633,
-        "location": "13.3, 5.7, -10.4"
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.64,
+        "value": 139,
+        "timestamp": 1741662505915,
+        "location": "-1.6, 5.7, 31.5"
       }
     ]
   },
   "Cod": {
     "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 5.38,
+        "value": 44,
+        "timestamp": 1741662218391,
+        "location": "2.2, 6.7, -25.4"
+      },
       {
         "playerName": "player-1",
         "playerId": "player-1",
@@ -120,12 +128,184 @@
     ],
     "byValue": [
       {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 5.38,
+        "value": 44,
+        "timestamp": 1741662218391,
+        "location": "2.2, 6.7, -25.4"
+      },
+      {
         "playerName": "player-1",
         "playerId": "player-1",
         "weight": 4.97,
         "value": 41,
         "timestamp": 1741633366315,
         "location": "-2.2, 5.7, 31.4"
+      }
+    ]
+  },
+  "Goldfish": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.68,
+        "value": 140,
+        "timestamp": 1741661667300,
+        "location": "-3.3, 5.7, 9.6"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.68,
+        "value": 140,
+        "timestamp": 1741661667300,
+        "location": "-3.3, 5.7, 9.6"
+      }
+    ]
+  },
+  "Goldfin Mackerel": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 9.29,
+        "value": 371,
+        "timestamp": 1741662387099,
+        "location": "14.0, 5.7, -9.6"
+      },
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.9,
+        "value": 130,
+        "timestamp": 1741662101891,
+        "location": "-0.9, 5.7, 31.6"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 9.29,
+        "value": 371,
+        "timestamp": 1741662387099,
+        "location": "14.0, 5.7, -9.6"
+      },
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 4.9,
+        "value": 130,
+        "timestamp": 1741662101891,
+        "location": "-0.9, 5.7, 31.6"
+      }
+    ]
+  },
+  "Puffer Fish": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 3.42,
+        "value": 42,
+        "timestamp": 1741662144876,
+        "location": "-1.2, 5.7, 31.3"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 3.42,
+        "value": 42,
+        "timestamp": 1741662144876,
+        "location": "-1.2, 5.7, 31.3"
+      }
+    ]
+  },
+  "Spotted Flounder": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 8.09,
+        "value": 202,
+        "timestamp": 1741662415117,
+        "location": "13.4, 5.7, -10.6"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 8.09,
+        "value": 202,
+        "timestamp": 1741662415117,
+        "location": "13.4, 5.7, -10.6"
+      }
+    ]
+  },
+  "Tuna": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 19.9,
+        "value": 99,
+        "timestamp": 1741662444498,
+        "location": "-1.3, 5.7, 31.5"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 19.9,
+        "value": 99,
+        "timestamp": 1741662444498,
+        "location": "-1.3, 5.7, 31.5"
+      }
+    ]
+  },
+  "Squid": {
+    "byWeight": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 64.08,
+        "value": 961,
+        "timestamp": 1741662535114,
+        "location": "-2.4, 5.7, 31.7"
+      },
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 24.65,
+        "value": 246,
+        "timestamp": 1741662464132,
+        "location": "-1.2, 5.7, 31.3"
+      }
+    ],
+    "byValue": [
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 64.08,
+        "value": 961,
+        "timestamp": 1741662535114,
+        "location": "-2.4, 5.7, 31.7"
+      },
+      {
+        "playerName": "player-2",
+        "playerId": "player-2",
+        "weight": 24.65,
+        "value": 246,
+        "timestamp": 1741662464132,
+        "location": "-1.2, 5.7, 31.3"
       }
     ]
   }

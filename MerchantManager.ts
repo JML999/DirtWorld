@@ -312,7 +312,8 @@ export class MerchantManager {
                     message: `Welcome to Oiji Sushi! Im running low on todays catch of the day, ${catchOfTheDay}. I'll trade you a Fly Rod for some. What do you say?`,
                     options: [
                         `${hasFish ? "Yes, trade my " + catchOfTheDay + " for a Fly Rod" : "I'll find a " + catchOfTheDay + " for you"}`,
-                        "No thanks"
+                        "Tell me about Fly Rods",
+                        "Tell me about Bait Crafting"
                     ]
                 }
             });
@@ -369,7 +370,20 @@ export class MerchantManager {
                 case 0: // First option - accept the deal
                     this.processSushiTrade(player);
                     break;
-                case 1: // Second option - decline
+
+                case 1: // Tell me about Fly Rods
+                    player.ui.sendData({
+                        type: 'merchantSpeak',
+                        message: "Fly Rods are the best way to catch freshwater fish. Cast them in ponds around the island."
+                    });
+                    break;
+                case 2: // Tell me about Bait Crafting
+                    player.ui.sendData({
+                        type: 'merchantSpeak',
+                        message: "Combining your catch with loot like seaweed is a great way to make new types of bait. Feel free to use our sushi crafting block to create your own!"
+                    });
+                    break;
+                case 3: // Second option - decline
                     player.ui.sendData({
                         type: 'merchantSpeak',
                         message: "No problem! Come back if you change your mind."

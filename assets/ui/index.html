@@ -40,6 +40,7 @@
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/BreathPanel.js'),
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/CraftingPanel.js'),
                 loadScript('{{CDN_ASSETS_URL}}/ui/panels/LeaderboardPanel.js'),
+                loadScript('{{CDN_ASSETS_URL}}/ui/panels/QuickTutorialPanel.js'),
             ]);
             
             window.GameUpdatesPanel.initialize('updates-container');
@@ -54,6 +55,7 @@
             window.BreathPanel.initialize('breath-container');
             window.CraftingPanel.initialize('crafting-container');
             window.LeaderboardPanel.initialize('leaderboard-container');
+            window.QuickTutorialPanel.initialize('quick-tutorial-container');
 
             console.log('UI initialization complete');
             hytopia.sendData({
@@ -83,5 +85,6 @@
     <div id="tutorial-container"></div>
     <div id="crafting-container"></div>
     <div id="leaderboard-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000;"></div>
+    <div id="quick-tutorial-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000;"></div>
 </body>
 </html>
